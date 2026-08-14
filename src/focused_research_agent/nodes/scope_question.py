@@ -12,7 +12,7 @@ recorded in state and the graph routes to handle_error.
 
 import logging
 
-from focused_research_agent.interfaces.llm_interface import LLMProvider
+from focused_research_agent.interfaces.llm_inference import LLMProvider
 from focused_research_agent.state import ResearchState
 
 logger = logging.getLogger(__name__)

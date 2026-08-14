@@ -17,7 +17,7 @@ this can never loop indefinitely regardless of how thin results stay.
 import logging
 
 from focused_research_agent.core.metrics import search_reflection_triggered_total
-from focused_research_agent.interfaces.llm_interface import LLMProvider
+from focused_research_agent.interfaces.llm_inference import LLMProvider
 from focused_research_agent.state import ResearchState
 
 logger = logging.getLogger(__name__)
@@ -59,3 +59,52 @@ def _build_reflection_prompt(state: ResearchState) -> str:
     Scope: {scope}
     User question: {question}
     """.strip()
+
+
+async def reflect_and_refine(state: ResearchState, llm_provider: LLMProvider) -> dict:
+    """Generate refined search queries after a thin first search attempt.
+
+    Args:
+        state: The current research state.
+        llm_provider: The active LLM provider instance.
+
+    Returns:
+        dict: A partial state update with new queries and an incremented
+            search_retry_count, or an errors field if refinement fails.
+    """
+    run_id = state.get("run_id", "unknown")
+    retry_count = state.get("search_retry_count") or 0
+
+    prompt = _build_reflection_prompt(state)
+
+    try:
+        response = await llm_provider.generate_json(prompt)
+    except Exception as e:
+        logger.exception("reflect_and_refine failed. run_id=%s error=%s", run_id, e)
+        return {"errors": [f"reflect_and_refine failed: {e}"]}
+
+    if not isinstance(response, dict) or "queries" not in response:
+        return {"errors": ["reflect_and_refine: Invalid response received from LLM"]}
+
+    raw_queries = response["queries"]
+    if not isinstance(raw_queries, list):
+        return {"errors": ["reflect_and_refine: 'queries' must be a list"]}
+
+    cleaned = [q.strip() for q in raw_queries if isinstance(q, str) and q.strip()]
+
+    if len(cleaned) < 3:
+        return {"errors": ["reflect_and_refine: fewer than 3 valid refined queries"]}
+
+    logger.info(
+        "Search reflection triggered. run_id=%s retry=%d new_queries=%d",
+        run_id,
+        retry_count + 1,
+        len(cleaned),
+    )
+    search_reflection_triggered_total.inc()
+
+    return {
+        "queries": cleaned[:6],
+        "search_retry_count": retry_count + 1,
+        "status": "refining",
+    }
