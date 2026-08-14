@@ -14,7 +14,7 @@ from tavily import AsyncTavilyClient
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from focused_research_agent.config.search_config import get_search_config
-from focused_research_agent.interfaces.search_interface import (
+from focused_research_agent.interfaces.search_inference import (
     SearchProvider,
     SearchResult,
 )

@@ -16,7 +16,7 @@ decouples the rest of the application from concrete provider classes.
 """
 
 from focused_research_agent.config.search_config import get_search_config
-from focused_research_agent.interfaces.search_interface import SearchProvider
+from focused_research_agent.interfaces.search_inference import SearchProvider
 from focused_research_agent.services.search_provider_tavily import TavilySearchClient
 
 
