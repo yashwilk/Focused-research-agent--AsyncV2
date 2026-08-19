@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from focused_research_agent.auth.schemas import (
+from focused_research_agent.auth.schema import (
     TokenResponse,
     UserLoginRequest,
     UserRegisterRequest,
@@ -27,7 +27,7 @@ from focused_research_agent.auth.security import (
     verify_password,
 )
 from focused_research_agent.database.database import get_db
-from focused_research_agent.database.models import User
+from focused_research_agent.database.model import User
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from focused_research_agent.auth.security import decode_access_token
 from focused_research_agent.database.database import get_db
-from focused_research_agent.database.models import User
+from focused_research_agent.database.model import User
 
 _bearer_scheme = HTTPBearer()
 
