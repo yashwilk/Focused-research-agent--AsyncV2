@@ -1,0 +1,12 @@
+{
+  "title": "Focused Research Agent",
+  "panels": [
+    {"type": "graph", "title": "HTTP Request Duration (s)", "targets": [{"expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])"}]},
+    {"type": "graph", "title": "Graph Run Duration (s) by mode", "targets": [{"expr": "rate(graph_run_duration_seconds_sum[5m]) / rate(graph_run_duration_seconds_count[5m])"}]},
+    {"type": "graph", "title": "Graph Runs by status", "targets": [{"expr": "sum(rate(graph_run_total[5m])) by (mode, status)"}]},
+    {"type": "graph", "title": "Cache Hit Rate", "targets": [{"expr": "sum(rate(cache_lookups_total{result=\"hit\"}[5m])) / sum(rate(cache_lookups_total[5m]))"}]},
+    {"type": "graph", "title": "Search Reflections Triggered", "targets": [{"expr": "rate(search_reflection_triggered_total[15m])"}]}
+  ],
+  "schemaVersion": 36,
+  "version": 1
+}
