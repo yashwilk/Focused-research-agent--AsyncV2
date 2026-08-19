@@ -16,9 +16,9 @@ Two ways to generate a report, both authenticated and rate-limited:
    long-running operations.
 """
 
-from typing import Annotated, Callable
-
 import logging
+from collections.abc import Callable
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,7 +41,9 @@ logger = logging.getLogger(__name__)
 report_router = APIRouter(tags=["report"])
 
 
-@report_router.post("/report", status_code=status.HTTP_200_OK, response_model=ReportResponse)
+@report_router.post(
+    "/report", status_code=status.HTTP_200_OK, response_model=ReportResponse
+)
 @limiter.limit(RATE_LIMIT_REPORT)
 async def report(
     request: Request,
@@ -51,11 +53,15 @@ async def report(
     _current_user=Depends(get_current_user),
 ) -> dict:
     """Run report generation inline and return the finished report."""
-    return await run_report_use_case(question=report_request.question, db=db, user_id=_current_user.id)
+    return await run_report_use_case(
+        question=report_request.question, db=db, user_id=_current_user.id
+    )
 
 
 @report_router.post(
-    "/report/submit", status_code=status.HTTP_202_ACCEPTED, response_model=ReportJobResponse
+    "/report/submit",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=ReportJobResponse,
 )
 @limiter.limit(RATE_LIMIT_REPORT)
 async def submit_report_job(
@@ -72,7 +78,7 @@ async def submit_report_job(
     """
     try:
         task = generate_report_task.delay(report_request.question, _current_user.id)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — broker/serialization errors must map to a clean 503, not an opaque 500
         logger.error("report_job_submission_failed error=%s", e)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

@@ -136,7 +136,7 @@ async def generate_queries(state: ResearchState, llm_provider: LLMProvider) -> d
     try:
         response = await llm_provider.generate_json(question_scope)
     except Exception as e:
-        logger.exception("generate_queries failed. run_id=%s error=%s", run_id, e)
+        logger.exception("generate_queries failed. run_id=%s", run_id)
         return {"errors": [f"generate_queries failed: {e}"]}
 
     if not isinstance(response, dict) or "queries" not in response:

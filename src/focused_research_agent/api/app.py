@@ -17,7 +17,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -29,7 +29,10 @@ from focused_research_agent.auth.router import auth_router
 from focused_research_agent.config.api_config import get_api_settings
 from focused_research_agent.config.logger_config import setup_logging
 from focused_research_agent.core.metrics import metrics_asgi_app
-from focused_research_agent.core.middleware import MetricsMiddleware, get_inflight_request_count
+from focused_research_agent.core.middleware import (
+    MetricsMiddleware,
+    get_inflight_request_count,
+)
 from focused_research_agent.core.rate_limiter import limiter
 from focused_research_agent.core.tracing import setup_tracing
 from focused_research_agent.database.database import engine, init_db
@@ -114,7 +117,9 @@ def create_app() -> FastAPI:
 
     logger.info(
         "Application configured. title=%s version=%s debug=%s",
-        settings.title, settings.version, settings.debug,
+        settings.title,
+        settings.version,
+        settings.debug,
     )
 
     return app

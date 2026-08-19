@@ -11,16 +11,17 @@ logic and no direct st.* rendering beyond layout and input widgets.
 """
 
 import streamlit as st
+
 from focused_research_agent.ui.api_client import call_research, check_health
+from focused_research_agent.ui.exceptions import BackendUnavailableError
 from focused_research_agent.ui.views import (
-    render_research_details,
-    render_error,
-    render_sources,
     render_answer,
+    render_error,
     render_health_status,
     render_metrics,
+    render_research_details,
+    render_sources,
 )
-from focused_research_agent.ui.exceptions import BackendUnavailableError
 
 
 def _init_session_state() -> None:
@@ -98,7 +99,9 @@ def _handle_research(question: str) -> None:
         else:
             try:
                 with st.spinner("Researching... this may take up to 2 minutes."):
-                    result = call_research(question, token=st.session_state.get("token"))
+                    result = call_research(
+                        question, token=st.session_state.get("token")
+                    )
                     st.session_state.last_result = result
                 if result["success"]:
                     st.session_state.history.append(

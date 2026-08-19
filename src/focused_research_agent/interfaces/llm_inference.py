@@ -1,5 +1,4 @@
-"""Abstract contract for LLM providers used by the research agent.
-"""
+"""Abstract contract for LLM providers used by the research agent."""
 
 from abc import ABC, abstractmethod
 

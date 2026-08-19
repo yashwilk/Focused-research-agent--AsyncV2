@@ -17,9 +17,9 @@ thread — they yield to the event loop like every other I/O in the async
 conversion of this project.
 """
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from focused_research_agent.config.database_config import get_database_settings
 from focused_research_agent.database.model import Base
@@ -32,7 +32,11 @@ if _database_url.startswith("sqlite"):
 engine = create_async_engine(_database_url, connect_args=_connect_args)
 
 AsyncSessionLocal = async_sessionmaker(
-    bind=engine, class_=AsyncSession, autocommit=False, autoflush=False, expire_on_commit=False
+    bind=engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
 )
 
 
@@ -56,7 +60,7 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """
     Yield an async database session and guarantee it is closed after use.
 

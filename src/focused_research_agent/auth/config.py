@@ -30,7 +30,6 @@ class AuthSettings:
     access_token_expire_minutes: int
 
 
-
 def get_auth_settings() -> AuthSettings:
     """Load auth settings from environment variables with sensible defaults."""
     secret_key = os.getenv("AUTH_SECRET_KEY", "dev-only-insecure-key-change-me")

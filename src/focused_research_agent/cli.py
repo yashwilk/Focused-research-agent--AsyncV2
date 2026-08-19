@@ -202,7 +202,7 @@ async def _run(user_question: str) -> None:
 
     except ApplicationError as e:
         print(format_error_output(str(e)))
-        logger.exception("ApplicationError occurred: %s", e)
+        logger.exception("ApplicationError occurred")
 
     except Exception as e:
         print(format_error_output(f"Unexpected internal error occurred: {e}"))

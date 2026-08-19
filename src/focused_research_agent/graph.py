@@ -1,21 +1,21 @@
 # builds & compiles the StateGraph
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 
-from focused_research_agent.state import ResearchState
-from focused_research_agent.nodes.init_run import initialize_state
-from focused_research_agent.nodes.scope_question import scope_question
+from focused_research_agent.nodes.finalize_run import finalize_run
 from focused_research_agent.nodes.generate_queries import generate_queries
-from focused_research_agent.nodes.search_web import search_web
+from focused_research_agent.nodes.handle_error import handle_error
+from focused_research_agent.nodes.init_run import initialize_state
 from focused_research_agent.nodes.reflect_and_refine import (
-    reflect_and_refine,
     MAX_SEARCH_RETRIES,
     MIN_SOURCES_FOR_REFLECTION,
+    reflect_and_refine,
 )
+from focused_research_agent.nodes.scope_question import scope_question
+from focused_research_agent.nodes.search_web import search_web
 from focused_research_agent.nodes.synthesize_answer import synthesize_answer
-from focused_research_agent.nodes.finalize_run import finalize_run
 from focused_research_agent.services.llm_factory import get_llm_provider
-from focused_research_agent.nodes.handle_error import handle_error
 from focused_research_agent.services.search_factory import get_search_provider
+from focused_research_agent.state import ResearchState
 
 
 def route_after_node(state: ResearchState) -> str:

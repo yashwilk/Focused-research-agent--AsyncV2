@@ -125,7 +125,9 @@ class TavilySearchClient(SearchProvider):
             "score": score,
         }
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
+    @retry(
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8)
+    )
     async def _search_call_with_retry(self, query: str) -> dict:
         return await self.tavily_client.search(
             query=query,

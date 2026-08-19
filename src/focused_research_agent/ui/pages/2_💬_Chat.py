@@ -12,11 +12,12 @@ st.* calls for chat-specific widgets.
 """
 
 import streamlit as st
+
 from focused_research_agent.ui.api_client import (
     call_chat,
     check_health,
-    get_conversations,
     get_conversation,
+    get_conversations,
 )
 from focused_research_agent.ui.exceptions import BackendUnavailableError
 from focused_research_agent.ui.views import render_health_status
@@ -68,7 +69,9 @@ def _render_sidebar() -> None:
             with st.sidebar.expander(convo["title"] or "Untitled"):
                 if st.button("Load", key=convo["conversation_id"]):
                     st.session_state.conversation_id = convo["conversation_id"]
-                    turns = get_conversation(convo["conversation_id"], token=st.session_state.get("token"))
+                    turns = get_conversation(
+                        convo["conversation_id"], token=st.session_state.get("token")
+                    )
                     st.session_state.messages = []
                     for turn in turns:
                         st.session_state.messages.append(
@@ -124,7 +127,11 @@ def _handle_chat_input() -> None:
 
         try:
             with st.spinner("Researching..."):
-                result = call_chat(question, st.session_state.conversation_id, token=st.session_state.get("token"))
+                result = call_chat(
+                    question,
+                    st.session_state.conversation_id,
+                    token=st.session_state.get("token"),
+                )
         except BackendUnavailableError as e:
             st.error(str(e))
             st.stop()

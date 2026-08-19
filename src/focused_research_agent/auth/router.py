@@ -8,7 +8,7 @@ identity provider (Auth0, Cognito, etc.) rather than hand-rolled here.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -34,7 +34,9 @@ logger = logging.getLogger(__name__)
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-@auth_router.post("/register", status_code=status.HTTP_201_CREATED, response_model=TokenResponse)
+@auth_router.post(
+    "/register", status_code=status.HTTP_201_CREATED, response_model=TokenResponse
+)
 async def register(
     request: UserRegisterRequest, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> TokenResponse:
@@ -42,14 +44,16 @@ async def register(
     user = User(
         email=request.email,
         hashed_password=hash_password(request.password),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(user)
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        )
 
     logger.info("User registered. email=%s", request.email)
     return TokenResponse(access_token=create_access_token(request.email))
@@ -64,7 +68,10 @@ async def login(
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(request.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
 
     logger.info("User logged in. email=%s", request.email)
     return TokenResponse(access_token=create_access_token(request.email))

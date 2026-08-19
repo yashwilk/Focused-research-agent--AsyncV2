@@ -39,10 +39,14 @@ def setup_tracing(service_name: str = "focused-research-agent") -> None:
                 OTLPSpanExporter,
             )
 
-            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint)))
+            provider.add_span_processor(
+                BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint))
+            )
             logger.info("otel_exporting_to_otlp endpoint=%s", otlp_endpoint)
         except ImportError:
-            logger.warning("otel_otlp_exporter_not_installed_traces_created_but_not_exported")
+            logger.warning(
+                "otel_otlp_exporter_not_installed_traces_created_but_not_exported"
+            )
 
     trace.set_tracer_provider(provider)
     _TRACER_PROVIDER_INITIALIZED = True

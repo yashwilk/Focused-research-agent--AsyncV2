@@ -5,14 +5,16 @@ asyncpg (Postgres) or aiosqlite (SQLite) drivers.
 import asyncio
 from logging.config import fileConfig
 
+from focused_research_agent.database.models import (
+    Base,
+    User,  # noqa: F401 — registers table with Base.metadata
+)
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from focused_research_agent.config.database_config import get_database_settings
-from focused_research_agent.database.models import Base
-from focused_research_agent.database.models import User  # noqa: F401 — registers table with Base.metadata
 
 config = context.config
 if config.config_file_name is not None:

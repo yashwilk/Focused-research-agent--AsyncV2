@@ -52,7 +52,7 @@ async def search_web(state: ResearchState, search_provider: SearchProvider) -> d
     try:
         search_results, images = await search_provider.search(queries)
     except Exception as e:
-        logger.exception("search_web failed. run_id=%s error=%s", run_id, e)
+        logger.exception("search_web failed. run_id=%s", run_id)
         return {"errors": [f"search_web failed: {e}"]}
 
     logger.info(

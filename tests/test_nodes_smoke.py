@@ -1,4 +1,5 @@
 import importlib
+
 from focused_research_agent.state import ResearchState
 
 """
@@ -125,9 +126,9 @@ def fake_get_search_provider(search_depth: str | None = None):
 
 
 def test_graph_smoke_run(monkeypatch):
-    import focused_research_agent.services.llm_factory as llm_factory
-    import focused_research_agent.services.search_factory as search_factory_module  # ← change
     import focused_research_agent.graph as graph_module
+    import focused_research_agent.services.search_factory as search_factory_module  # ← change
+    from focused_research_agent.services import llm_factory
 
     monkeypatch.setattr(llm_factory, "get_llm_provider", fake_get_llm_provider)
     monkeypatch.setattr(

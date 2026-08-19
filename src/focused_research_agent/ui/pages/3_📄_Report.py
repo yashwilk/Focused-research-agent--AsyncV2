@@ -14,15 +14,20 @@ Architecturally, this module is a UI transport entrypoint alongside
 Home.py and the other pages. It follows the same thin wiring pattern.
 """
 
+import logging
+
 import streamlit as st
-from focused_research_agent.ui.exceptions import BackendUnavailableError
-from focused_research_agent.ui.views import render_health_status
+
 from focused_research_agent.ui.api_client import (
     call_report,
     check_health,
     get_conversation,
     get_reports,
 )
+from focused_research_agent.ui.exceptions import BackendUnavailableError
+from focused_research_agent.ui.views import render_health_status
+
+logger = logging.getLogger(__name__)
 
 
 def _init_session_state() -> None:
@@ -113,7 +118,7 @@ def _render_report_success(data: dict) -> None:
                 try:
                     st.image(url, use_container_width=True)
                 except Exception:
-                    pass
+                    logger.debug("Failed to render image url=%s", url, exc_info=True)
         st.divider()
 
     if data.get("sources"):

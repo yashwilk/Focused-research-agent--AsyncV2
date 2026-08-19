@@ -7,10 +7,10 @@ feature routers under a shared prefix.
 
 from fastapi import APIRouter
 
-from focused_research_agent.api.router.research import research_router
 from focused_research_agent.api.router.chat import chat_router
 from focused_research_agent.api.router.conversations import conversations_router
 from focused_research_agent.api.router.report import report_router
+from focused_research_agent.api.router.research import research_router
 
 
 def create_v1_router() -> APIRouter:

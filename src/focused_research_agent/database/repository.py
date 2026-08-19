@@ -19,9 +19,9 @@ Async conversion note: every function is now async and uses SQLAlchemy
 legacy db.query() API, which has no async equivalent.
 """
 
-import logging
 import json
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,7 +64,7 @@ async def save_run(
     Returns:
         ConversationRun: The saved model instance with its database ID populated.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     conversation_title = None
     if turn_number == 1:
@@ -95,7 +95,10 @@ async def save_run(
     await db.refresh(run)
     logger.info(
         "Run saved. conversation_id=%s turn=%d mode=%s run_id=%s",
-        conversation_id, turn_number, mode, state["run_id"],
+        conversation_id,
+        turn_number,
+        mode,
+        state["run_id"],
     )
     return run
 
@@ -123,17 +126,26 @@ async def get_conversation_history(
     runs = list(reversed(result.scalars().all()))
 
     history = [
-        {"turn": run.turn_number, "question": run.question, "answer": run.answer, "scope": run.scope}
+        {
+            "turn": run.turn_number,
+            "question": run.question,
+            "answer": run.answer,
+            "scope": run.scope,
+        }
         for run in runs
     ]
 
     logger.debug(
-        "Conversation history fetched. conversation_id=%s turns=%d", conversation_id, len(history)
+        "Conversation history fetched. conversation_id=%s turns=%d",
+        conversation_id,
+        len(history),
     )
     return history
 
 
-async def get_all_conversations(db: AsyncSession, user_id: int | None = None) -> list[dict]:
+async def get_all_conversations(
+    db: AsyncSession, user_id: int | None = None
+) -> list[dict]:
     """Fetch a summary list of all conversations for the history sidebar.
 
     Scoped to user_id when provided — each user only sees their own
@@ -152,7 +164,11 @@ async def get_all_conversations(db: AsyncSession, user_id: int | None = None) ->
     runs = result.scalars().all()
 
     conversations = [
-        {"conversation_id": run.conversation_id, "title": run.conversation_title, "created_at": run.created_at.isoformat()}
+        {
+            "conversation_id": run.conversation_id,
+            "title": run.conversation_title,
+            "created_at": run.created_at.isoformat(),
+        }
         for run in runs
     ]
 
@@ -197,7 +213,11 @@ async def get_conversation_turns(
         }
         for run in runs
     ]
-    logger.debug("Conversation turns fetched. conversation_id=%s count=%d", conversation_id, len(turns))
+    logger.debug(
+        "Conversation turns fetched. conversation_id=%s count=%d",
+        conversation_id,
+        len(turns),
+    )
     return turns
 
 
@@ -219,7 +239,11 @@ async def get_all_reports(db: AsyncSession, user_id: int | None = None) -> list[
     runs = result.scalars().all()
 
     reports = [
-        {"conversation_id": run.conversation_id, "title": run.conversation_title, "created_at": run.created_at.isoformat()}
+        {
+            "conversation_id": run.conversation_id,
+            "title": run.conversation_title,
+            "created_at": run.created_at.isoformat(),
+        }
         for run in runs
     ]
     logger.debug("All reports fetched. count=%d", len(reports))

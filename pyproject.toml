@@ -48,6 +48,18 @@ dev = [
     "aiosqlite>=0.20.0",
 ]
 
+[tool.ruff.lint]
+# B008: FastAPI's Depends()-as-default-argument is the framework's documented
+# DI pattern, not a bug — https://fastapi.tiangolo.com/tutorial/dependencies/
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# N999: Streamlit's multipage-app convention requires these exact emoji
+# filenames for sidebar icons/ordering — renaming would break navigation.
+"src/focused_research_agent/ui/pages/*.py" = ["N999"]
+# N999: Streamlit requires the capitalized entrypoint filename "Home.py".
+"src/focused_research_agent/ui/Home.py" = ["N999"]
+
 [tool.coverage.run]
 omit = [
     "src/focused_research_agent/ui/views.py",

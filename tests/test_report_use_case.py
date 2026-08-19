@@ -22,13 +22,13 @@ Why it matters:
 """
 
 import pytest
+from focused_research_agent.database.model import Base
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 import focused_research_agent.application.report_use_case as report_use_case_module
 from focused_research_agent.application.exceptions import ApplicationError
 from focused_research_agent.application.report_use_case import execute_report
-from focused_research_agent.database.models import Base
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -242,7 +242,7 @@ def test_execute_report_persists_run_to_database(db, monkeypatch):
 
     execute_report(question="What is quantum computing?", db=db)
 
-    from focused_research_agent.database.models import ConversationRun
+    from focused_research_agent.database.model import ConversationRun
 
     count = db.query(ConversationRun).count()
     assert count == 1

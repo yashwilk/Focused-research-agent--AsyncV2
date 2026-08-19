@@ -1,4 +1,3 @@
-
 class ApplicationError(Exception):
     """
     Represent an expected application/use-case failure.

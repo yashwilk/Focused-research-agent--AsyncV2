@@ -12,7 +12,9 @@ from focused_research_agent.reliability.circuit_breaker import (
 
 
 async def test_circuit_stays_closed_on_success():
-    breaker = CircuitBreaker(name="test", failure_threshold=3, recovery_timeout_seconds=1)
+    breaker = CircuitBreaker(
+        name="test", failure_threshold=3, recovery_timeout_seconds=1
+    )
 
     async def ok():
         return "success"
@@ -23,7 +25,9 @@ async def test_circuit_stays_closed_on_success():
 
 
 async def test_circuit_opens_after_threshold_failures():
-    breaker = CircuitBreaker(name="test", failure_threshold=2, recovery_timeout_seconds=5)
+    breaker = CircuitBreaker(
+        name="test", failure_threshold=2, recovery_timeout_seconds=5
+    )
 
     async def fail():
         raise RuntimeError("boom")
@@ -36,7 +40,9 @@ async def test_circuit_opens_after_threshold_failures():
 
 
 async def test_open_circuit_rejects_calls_immediately():
-    breaker = CircuitBreaker(name="test", failure_threshold=1, recovery_timeout_seconds=5)
+    breaker = CircuitBreaker(
+        name="test", failure_threshold=1, recovery_timeout_seconds=5
+    )
 
     async def fail():
         raise RuntimeError("boom")
@@ -52,7 +58,9 @@ async def test_open_circuit_rejects_calls_immediately():
 
 
 async def test_circuit_half_opens_after_recovery_timeout():
-    breaker = CircuitBreaker(name="test", failure_threshold=1, recovery_timeout_seconds=0.1)
+    breaker = CircuitBreaker(
+        name="test", failure_threshold=1, recovery_timeout_seconds=0.1
+    )
 
     async def fail():
         raise RuntimeError("boom")
@@ -66,7 +74,9 @@ async def test_circuit_half_opens_after_recovery_timeout():
 
 
 async def test_successful_half_open_call_closes_circuit():
-    breaker = CircuitBreaker(name="test", failure_threshold=1, recovery_timeout_seconds=0.1)
+    breaker = CircuitBreaker(
+        name="test", failure_threshold=1, recovery_timeout_seconds=0.1
+    )
 
     async def fail():
         raise RuntimeError("boom")

@@ -12,7 +12,9 @@ of an external API.
 """
 
 from typing import TypedDict
+
 import httpx
+
 from focused_research_agent.config.ui_config import get_ui_settings
 from focused_research_agent.ui.exceptions import BackendUnavailableError
 
@@ -74,7 +76,11 @@ def register(email: str, password: str) -> ResearchCallResult:
         )
         if response.status_code == 201:
             return {"success": True, "data": response.json(), "error": None}
-        detail = response.json().get("detail", "Registration failed.") if response.content else "Registration failed."
+        detail = (
+            response.json().get("detail", "Registration failed.")
+            if response.content
+            else "Registration failed."
+        )
         return {"success": False, "data": None, "error": detail}
     except httpx.ConnectError:
         raise BackendUnavailableError(
@@ -183,7 +189,9 @@ def call_research(question: str, token: str | None = None) -> ResearchCallResult
         }
 
 
-def call_chat(question: str, conversation_id: str | None, token: str | None = None) -> ResearchCallResult:
+def call_chat(
+    question: str, conversation_id: str | None, token: str | None = None
+) -> ResearchCallResult:
     """
     Send a chat turn to the FastAPI backend and return the result.
 

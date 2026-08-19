@@ -21,9 +21,10 @@ instead of local memory; the interface below would not need to change.
 """
 
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Awaitable, Callable, TypeVar
+from typing import TypeVar
 
 from focused_research_agent.core.metrics import (
     circuit_breaker_state,
@@ -72,9 +73,11 @@ class CircuitBreaker:
 
     @property
     def state(self) -> CircuitState:
-        if self._state == CircuitState.OPEN:
-            if time.monotonic() - self._opened_at >= self.recovery_timeout_seconds:
-                self._state = CircuitState.HALF_OPEN
+        if (
+            self._state == CircuitState.OPEN
+            and time.monotonic() - self._opened_at >= self.recovery_timeout_seconds
+        ):
+            self._state = CircuitState.HALF_OPEN
         return self._state
 
     def _record_success(self) -> None:

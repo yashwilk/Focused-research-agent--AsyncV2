@@ -20,7 +20,6 @@ import json
 import logging
 import os
 import time
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ class InMemoryResponseCache:
         self._store: dict[str, tuple[float, str]] = {}
         self._default_ttl = default_ttl
 
-    async def get(self, question: str) -> Optional[dict]:
+    async def get(self, question: str) -> dict | None:
         key = _cache_key(question)
         entry = self._store.get(key)
         if entry is None:
@@ -63,7 +62,7 @@ class InMemoryResponseCache:
         cache_lookups_total.labels(result="hit").inc()
         return json.loads(value)
 
-    async def set(self, question: str, value: dict, ttl: Optional[int] = None) -> None:
+    async def set(self, question: str, value: dict, ttl: int | None = None) -> None:
         key = _cache_key(question)
         self._store[key] = (
             time.monotonic() + (ttl or self._default_ttl),
@@ -81,21 +80,21 @@ class RedisResponseCache:
         self._client = Redis.from_url(redis_url, decode_responses=True)
         self._default_ttl = default_ttl
 
-    async def get(self, question: str) -> Optional[dict]:
+    async def get(self, question: str) -> dict | None:
         try:
             raw = await self._client.get(_cache_key(question))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — cache is best-effort; any Redis failure should degrade to a miss, not fail the request
             logger.warning("cache_get_failed error=%s", e)
             return None
         cache_lookups_total.labels(result="hit" if raw else "miss").inc()
         return json.loads(raw) if raw else None
 
-    async def set(self, question: str, value: dict, ttl: Optional[int] = None) -> None:
+    async def set(self, question: str, value: dict, ttl: int | None = None) -> None:
         try:
             await self._client.set(
                 _cache_key(question), json.dumps(value), ex=(ttl or self._default_ttl)
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — cache is best-effort; a failed write must not fail the request
             logger.warning("cache_set_failed error=%s", e)
 
     async def close(self) -> None:

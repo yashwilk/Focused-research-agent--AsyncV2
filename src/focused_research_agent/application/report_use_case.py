@@ -38,14 +38,19 @@ from focused_research_agent.application.research_use_case import (
     normalize_state,
 )
 from focused_research_agent.config.logger_config import bind_run_id
-from focused_research_agent.core.metrics import graph_run_duration_seconds, graph_run_total
+from focused_research_agent.core.metrics import (
+    graph_run_duration_seconds,
+    graph_run_total,
+)
 from focused_research_agent.database.repository import save_run
 from focused_research_agent.graph import build_graph
 
 logger = logging.getLogger(__name__)
 
 
-async def execute_report(question: str, db: AsyncSession, user_id: int | None = None) -> dict:
+async def execute_report(
+    question: str, db: AsyncSession, user_id: int | None = None
+) -> dict:
     """Execute a deep research report generation run (async).
 
     Persistence failure does not fail the report result — the completed
@@ -83,7 +88,9 @@ async def execute_report(question: str, db: AsyncSession, user_id: int | None = 
 
     try:
         conversation_id = str(uuid.uuid4())
-        await save_run(db, result, conversation_id, turn_number=1, mode="report", user_id=user_id)
+        await save_run(
+            db, result, conversation_id, turn_number=1, mode="report", user_id=user_id
+        )
     except SQLAlchemyError:
         logger.exception("Failed to save report run to database")
 

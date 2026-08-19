@@ -4,8 +4,8 @@ Chat API endpoint for the Focused Research Agent.
 Async + auth + rate-limit conversion, same pattern as research.py.
 """
 
-from typing import Annotated
 from collections.abc import Callable
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -21,11 +21,18 @@ from focused_research_agent.reliability.circuit_breaker import CircuitBreakerOpe
 logger = logging.getLogger("focused_research_agent.api.exception_handlers")
 
 
-def _build_error_response(status_code: int, error: str, detail: str, path: str) -> JSONResponse:
+def _build_error_response(
+    status_code: int, error: str, detail: str, path: str
+) -> JSONResponse:
     """Build a consistent JSON error response for the API layer."""
     return JSONResponse(
         status_code=status_code,
-        content={"status_code": status_code, "error": error, "detail": detail, "path": path},
+        content={
+            "status_code": status_code,
+            "error": error,
+            "detail": detail,
+            "path": path,
+        },
     )
 
 

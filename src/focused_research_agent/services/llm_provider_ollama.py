@@ -38,7 +38,9 @@ class OllamaLLMProvider(LLMProvider):
         self.model = self.llm_config["model"]
         self._breaker = get_circuit_breaker("ollama")
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
+    @retry(
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8)
+    )
     async def _chat_with_retry(self, updated_prompt: str):
         return await self.client.chat(
             model=self.model,
@@ -79,8 +81,8 @@ class OllamaLLMProvider(LLMProvider):
 
         try:
             return json.loads(text)
-        except json.JSONDecodeError as e:
-            logger.exception("Invalid JSON from LLM: %s", e)
+        except json.JSONDecodeError:
+            logger.exception("Invalid JSON from LLM")
 
         candidate = self._extract_json_candidate(text)
 

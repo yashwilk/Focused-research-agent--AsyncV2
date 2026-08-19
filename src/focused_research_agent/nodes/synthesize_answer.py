@@ -53,8 +53,7 @@ def _extract_domain(url: str) -> str:
     """Extract and normalize the domain name from a URL."""
     domain = urlparse(url).netloc.lower().strip()
 
-    if domain.startswith("www."):
-        domain = domain[4:]
+    domain = domain.removeprefix("www.")
 
     return domain
 
@@ -434,16 +433,14 @@ async def synthesize_answer(state: ResearchState, llm_provider: LLMProvider) -> 
     try:
         response = await llm_provider.generate_json(prompt)
     except Exception as e:
-        logger.exception("synthesize_answer failed. run_id=%s error=%s", run_id, e)
+        logger.exception("synthesize_answer failed. run_id=%s", run_id)
         return {"errors": [f"synthesize_answer failed: {e}"]}
 
     try:
         answer, citations = _validate_synthesis_response(response)
         cleaned_citations = _clean_citations(citations, allowed_urls)
     except ValueError as e:
-        logger.exception(
-            "synthesize_answer: Validation failed. run_id=%s error=%s", run_id, e
-        )
+        logger.exception("synthesize_answer: Validation failed. run_id=%s", run_id)
         return {"errors": [str(e)]}
 
     logger.info(  # ← add

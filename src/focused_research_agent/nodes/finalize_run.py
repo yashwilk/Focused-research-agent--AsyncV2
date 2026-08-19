@@ -14,6 +14,7 @@ the last node to execute in a successful graph run.
 """
 
 import logging
+
 from focused_research_agent.state import ResearchState
 
 logger = logging.getLogger(__name__)

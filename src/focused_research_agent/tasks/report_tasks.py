@@ -39,11 +39,21 @@ def generate_report_task(self, question: str, user_id: int | None = None) -> dic
             /api/v1/report endpoint), or an error payload if the question
             failed validation.
     """
-    logger.info("Report task started. task_id=%s question='%s'", self.request.id, question[:50])
+    logger.info(
+        "Report task started. task_id=%s question='%s'", self.request.id, question[:50]
+    )
     try:
         result = asyncio.run(_run_report(question, user_id))
-        logger.info("Report task completed. task_id=%s status=%s", self.request.id, result.get("status"))
+        logger.info(
+            "Report task completed. task_id=%s status=%s",
+            self.request.id,
+            result.get("status"),
+        )
         return result
     except ApplicationError as e:
-        logger.warning("Report task rejected invalid question. task_id=%s error=%s", self.request.id, e)
+        logger.warning(
+            "Report task rejected invalid question. task_id=%s error=%s",
+            self.request.id,
+            e,
+        )
         return {"status": "error", "errors": [str(e)]}

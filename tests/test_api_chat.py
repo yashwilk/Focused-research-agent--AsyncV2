@@ -25,14 +25,14 @@ Why it matters:
 
 import pytest
 from fastapi.testclient import TestClient
+from focused_research_agent.database.model import Base
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from focused_research_agent.api.app import create_app
 from focused_research_agent.api.dependencies import get_chat_use_case
 from focused_research_agent.application.exceptions import ApplicationError
 from focused_research_agent.database.database import get_db
-from focused_research_agent.database.models import Base
 from focused_research_agent.database.repository import save_run
 
 app = create_app()

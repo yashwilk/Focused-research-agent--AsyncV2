@@ -27,8 +27,9 @@ Why it matters:
 """
 
 import pytest
+from focused_research_agent.database.model import Base
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 import focused_research_agent.application.chat_use_case as chat_use_case_module
 from focused_research_agent.application.chat_use_case import (
@@ -36,7 +37,6 @@ from focused_research_agent.application.chat_use_case import (
     execute_chat_turn,
 )
 from focused_research_agent.application.exceptions import ApplicationError
-from focused_research_agent.database.models import Base
 from focused_research_agent.database.repository import save_run
 
 # ---------------------------------------------------------------------------

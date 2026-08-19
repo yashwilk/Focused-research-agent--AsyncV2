@@ -17,7 +17,8 @@ async def client():
 
 async def test_register_returns_access_token(client):
     response = await client.post(
-        "/api/v1/auth/register", json={"email": "new@example.com", "password": "strongpass1"}
+        "/api/v1/auth/register",
+        json={"email": "new@example.com", "password": "strongpass1"},
     )
     assert response.status_code == 201
     body = response.json()
@@ -55,7 +56,8 @@ async def test_login_with_wrong_password_rejected(client):
 
 async def test_login_with_unknown_email_rejected(client):
     response = await client.post(
-        "/api/v1/auth/login", json={"email": "nobody@example.com", "password": "anything"}
+        "/api/v1/auth/login",
+        json={"email": "nobody@example.com", "password": "anything"},
     )
     assert response.status_code == 401
 

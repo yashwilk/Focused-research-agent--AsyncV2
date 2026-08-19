@@ -26,10 +26,10 @@ Why it matters:
 """
 
 import pytest
+from focused_research_agent.database.model import Base, ConversationRun
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
-from focused_research_agent.database.models import Base, ConversationRun
 from focused_research_agent.database.repository import (
     _deserialize,
     _serialize,

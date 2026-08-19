@@ -19,7 +19,9 @@ if "token" not in st.session_state:
     st.session_state["token"] = None
 
 if st.session_state["token"]:
-    st.success("You're logged in. Use the sidebar to navigate to Research, Chat, or Report.")
+    st.success(
+        "You're logged in. Use the sidebar to navigate to Research, Chat, or Report."
+    )
     if st.button("Log out"):
         st.session_state["token"] = None
         st.rerun()

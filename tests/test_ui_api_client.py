@@ -24,12 +24,12 @@ import httpx
 import pytest
 
 import focused_research_agent.ui.api_client as api_client_module
-from focused_research_agent.ui.exceptions import BackendUnavailableError
 from focused_research_agent.ui.api_client import (
-    call_research,
     call_report,
+    call_research,
     check_health,
 )
+from focused_research_agent.ui.exceptions import BackendUnavailableError
 
 
 class FakeResponse:

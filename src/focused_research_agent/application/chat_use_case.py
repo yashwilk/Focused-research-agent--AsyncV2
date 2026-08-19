@@ -18,9 +18,9 @@ Async conversion: uses graph.ainvoke() and the now-async repository
 functions (get_conversation_history, save_run) with an AsyncSession.
 """
 
+import logging
 import time
 import uuid
-import logging
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +34,10 @@ from focused_research_agent.application.research_use_case import (
     normalize_state,
 )
 from focused_research_agent.config.logger_config import bind_run_id
-from focused_research_agent.core.metrics import graph_run_duration_seconds, graph_run_total
+from focused_research_agent.core.metrics import (
+    graph_run_duration_seconds,
+    graph_run_total,
+)
 from focused_research_agent.database.repository import (
     get_conversation_history,
     save_run,

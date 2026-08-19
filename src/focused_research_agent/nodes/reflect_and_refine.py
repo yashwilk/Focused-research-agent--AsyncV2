@@ -80,7 +80,7 @@ async def reflect_and_refine(state: ResearchState, llm_provider: LLMProvider) ->
     try:
         response = await llm_provider.generate_json(prompt)
     except Exception as e:
-        logger.exception("reflect_and_refine failed. run_id=%s error=%s", run_id, e)
+        logger.exception("reflect_and_refine failed. run_id=%s", run_id)
         return {"errors": [f"reflect_and_refine failed: {e}"]}
 
     if not isinstance(response, dict) or "queries" not in response:

@@ -10,8 +10,12 @@ services/).
 """
 
 from collections.abc import Awaitable, Callable
-from focused_research_agent.application import chat_use_case, report_use_case
-from focused_research_agent.application import research_use_case
+
+from focused_research_agent.application import (
+    chat_use_case,
+    report_use_case,
+    research_use_case,
+)
 
 
 def get_research_use_case() -> Callable[[str], Awaitable[dict]]:

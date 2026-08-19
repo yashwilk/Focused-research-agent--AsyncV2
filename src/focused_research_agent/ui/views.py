@@ -10,7 +10,11 @@ transport — the same role the format_* functions play in cli.py, but
 rendering widgets instead of building terminal strings.
 """
 
+import logging
+
 import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 
 def render_health_status(is_online: bool) -> None:
@@ -149,7 +153,7 @@ def render_sources(sources: list[dict], images: list[str] | None = None) -> None
                 try:
                     st.image(url, use_container_width=True)
                 except Exception:
-                    pass
+                    logger.debug("Failed to render image url=%s", url, exc_info=True)
 
     st.subheader("📚 Sources")
     if not sources:

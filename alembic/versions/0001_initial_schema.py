@@ -5,16 +5,17 @@ Revises:
 Create Date: 2026-08-08
 
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 
 from alembic import op
 
 revision: str = "0001"
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -58,14 +59,19 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
-        op.f("ix_conversation_runs_user_id"), "conversation_runs", ["user_id"], unique=False
+        op.f("ix_conversation_runs_user_id"),
+        "conversation_runs",
+        ["user_id"],
+        unique=False,
     )
 
 
 def downgrade() -> None:
     """Drop conversation_runs and users tables."""
     op.drop_index(op.f("ix_conversation_runs_user_id"), table_name="conversation_runs")
-    op.drop_index(op.f("ix_conversation_runs_conversation_id"), table_name="conversation_runs")
+    op.drop_index(
+        op.f("ix_conversation_runs_conversation_id"), table_name="conversation_runs"
+    )
     op.drop_table("conversation_runs")
     op.drop_index(op.f("ix_users_email"), table_name="users")
     op.drop_table("users")

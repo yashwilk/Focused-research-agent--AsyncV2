@@ -16,7 +16,7 @@ the data schema and knows nothing about HTTP, graph nodes, or
 application logic.
 """
 
-from sqlalchemy import DateTime, Integer, String, Text, Column
+from sqlalchemy import Column, DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -27,8 +27,6 @@ class Base(DeclarativeBase):
     All models in this project inherit from this class. SQLAlchemy uses
     it to track all table definitions and create them in the database.
     """
-
-    pass
 
 
 class ConversationRun(Base):

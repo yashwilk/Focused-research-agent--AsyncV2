@@ -28,7 +28,10 @@ from focused_research_agent.application.question_validation import (
 )
 from focused_research_agent.caching.cache_service import response_cache
 from focused_research_agent.config.logger_config import bind_run_id
-from focused_research_agent.core.metrics import graph_run_duration_seconds, graph_run_total
+from focused_research_agent.core.metrics import (
+    graph_run_duration_seconds,
+    graph_run_total,
+)
 from focused_research_agent.graph import build_graph
 from focused_research_agent.state import ResearchState
 
@@ -150,7 +153,9 @@ async def research_question(question: str) -> dict:
 
     _start = time.monotonic()
     final_state = await graph.ainvoke(initial_state)
-    graph_run_duration_seconds.labels(mode="research").observe(time.monotonic() - _start)
+    graph_run_duration_seconds.labels(mode="research").observe(
+        time.monotonic() - _start
+    )
 
     result = normalize_state(final_state, user_query)
     graph_run_total.labels(mode="research", status=result.get("status", "error")).inc()

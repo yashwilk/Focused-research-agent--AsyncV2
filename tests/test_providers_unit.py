@@ -20,11 +20,11 @@ from types import SimpleNamespace
 import pytest
 
 import focused_research_agent.services.llm_provider_groq as llm_provider_module
+import focused_research_agent.services.llm_provider_ollama as ollama_provider_module
 import focused_research_agent.services.search_provider_tavily as search_provider_module
 from focused_research_agent.services.llm_provider_groq import GroqLLMProvider
-from focused_research_agent.services.search_provider_tavily import TavilySearchClient
-import focused_research_agent.services.llm_provider_ollama as ollama_provider_module
 from focused_research_agent.services.llm_provider_ollama import OllamaLLMProvider
+from focused_research_agent.services.search_provider_tavily import TavilySearchClient
 
 
 class FakeLLM:

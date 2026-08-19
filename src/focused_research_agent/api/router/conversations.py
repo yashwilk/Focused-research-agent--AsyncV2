@@ -8,8 +8,10 @@ report history by guessing a conversation_id.
 """
 
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from focused_research_agent.auth.dependencies import get_current_user
 from focused_research_agent.database.database import get_db
 from focused_research_agent.database.model import User
