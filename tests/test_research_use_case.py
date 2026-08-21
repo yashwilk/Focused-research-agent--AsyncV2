@@ -17,7 +17,7 @@ class FakeGraph:
     invoking the real LangGraph workflow.
     """
 
-    def invoke(self, initial_state: dict) -> dict:
+    async def ainvoke(self, initial_state: dict) -> dict:
         """
         Return a fixed successful graph result.
 
@@ -65,7 +65,10 @@ def test_make_initial_state_returns_expected_shape():
     """
     result = use_case_module.make_initial_state("test question")
 
-    assert result["run_id"] == ""
+    # run_id is generated here (not left blank for init_run) so log
+    # correlation works across every node task from the very first line —
+    # see make_initial_state's docstring for why.
+    assert isinstance(result["run_id"], str) and result["run_id"] != ""
     assert result["question"] == "test question"
     assert result["scope"] is None
     assert result["assumptions"] is None
@@ -81,32 +84,32 @@ def test_make_initial_state_returns_expected_shape():
     assert result["conversation_history"] is None
 
 
-def test_research_question_raises_when_question_is_not_string():
+async def test_research_question_raises_when_question_is_not_string():
     """
     Verify that the use case raises ApplicationError when the question is
     not a string.
     """
     with pytest.raises(ApplicationError, match="User query must be a string"):
-        use_case_module.research_question(123)  # type: ignore[arg-type]
+        await use_case_module.research_question(123)  # type: ignore[arg-type]
 
 
-def test_research_question_raises_when_question_is_blank():
+async def test_research_question_raises_when_question_is_blank():
     """
     Verify that the use case raises ApplicationError when the question is
     empty after trimming whitespace.
     """
     with pytest.raises(ApplicationError, match="No user query provided"):
-        use_case_module.research_question("   ")
+        await use_case_module.research_question("   ")
 
 
-def test_research_question_returns_normalized_graph_result(monkeypatch):
+async def test_research_question_returns_normalized_graph_result(monkeypatch):
     """
     Verify that the use case returns a normalized result after executing the
     graph successfully.
     """
     monkeypatch.setattr(use_case_module, "build_graph", fake_build_graph)
 
-    result = use_case_module.research_question("   test question   ")
+    result = await use_case_module.research_question("   test question   ")
 
     assert result["run_id"] == "run-456"
     assert result["question"] == "test question"

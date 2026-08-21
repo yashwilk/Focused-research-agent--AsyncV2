@@ -23,13 +23,7 @@ pinned: false
 [![uv](https://img.shields.io/badge/uv-package_manager-DE5FE9.svg)](https://docs.astral.sh/uv/)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-HuggingFace-yellow.svg)](https://tushark2111-focused-research-agent.hf.space)
 
-## 🚀 Live Demo
 
-**[Try it here → https://tushark2111-focused-research-agent.hf.space](https://tushark2111-focused-research-agent.hf.space)**
-
-No installation required. Ask a research question and watch the agent work.
-
----
 
 ## 🎯 What This Does
 
@@ -233,9 +227,7 @@ focused-research-agent/
 
 ### 1. Clone the repository
 
-```bash
-git clone https://github.com/tusharkhoche/focused-research-agent.git
-cd focused-research-agent
+
 ```
 
 ### 2. Install dependencies
@@ -422,131 +414,3 @@ Only `repository.py` touches SQLAlchemy. Switching from SQLite to PostgreSQL is 
 | Reliability        | [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=tusharkhoche_focused-research-agent&metric=reliability_rating&token=718dd7470a62c68bd770e36c666f393d1c3d5fe1)](https://sonarcloud.io/summary/new_code?id=tusharkhoche_focused-research-agent)|
 
 ---
-
-## 🏭 Production Grade — Honest Assessment (v2)
-
-This section previously listed six categories of gaps. Every item below
-has since been implemented — see the file paths for where.
-
-### Security ✅ (was ❌)
-- **Authentication** — JWT bearer tokens on every research/chat/report/
-  conversations endpoint. `focused_research_agent/auth/`
-- **Rate limiting** — per-endpoint limits (tighter on quota-consuming
-  routes), Redis-backed for multi-instance correctness.
-  `focused_research_agent/core/rate_limiter.py`
-- **HTTPS enforcement** — optional `HTTPSRedirectMiddleware`, off by
-  default (breaks local dev), on via `FORCE_HTTPS=true` behind a real
-  reverse proxy in production.
-- **Secrets manager** — pluggable `SecretsProvider` abstraction (env /
-  AWS Secrets Manager / Azure Key Vault), same Factory pattern as the
-  LLM/search providers. `focused_research_agent/core/secrets.py`
-
-### Scalability ✅ (was ⚠️)
-- **PostgreSQL** — one env var change, now with real Alembic migrations
-  instead of bare `metadata.create_all`. `alembic/`
-- **Async endpoints** — full async conversion: async SQLAlchemy, async
-  LLM/search provider clients (verified `AsyncTavilyClient`,
-  `ollama.AsyncClient`, and LangChain's native `.ainvoke()` all exist and
-  work before committing to this design), `graph.ainvoke()` throughout.
-- **Task queue** — Celery + Redis for report generation specifically
-  (the slowest workflow): `POST /report/submit` + `GET /report/jobs/{id}`.
-  `focused_research_agent/tasks/`
-- **Caching** — repeated identical research questions hit cache instead
-  of Groq/Tavily again. Redis-backed, in-memory fallback.
-  `focused_research_agent/caching/`
-
-### Monitoring ✅ (was ⚠️)
-- **Distributed tracing** — OpenTelemetry, OTLP export when configured.
-  `focused_research_agent/core/tracing.py`
-- **Metrics dashboard** — Prometheus `/metrics` + provisioned Grafana
-  dashboard. `prometheus/`, `grafana/`
-- **Alerting** — Prometheus alert rules (error rate, circuit breaker
-  trips, slow runs) + Alertmanager. `prometheus/alert_rules.yml`,
-  `alertmanager/`
-- **Structured logging** — also fixed a real bug found during this pass:
-  the root logger was hardcoded to `ERROR`, silently dropping nearly
-  every `INFO`/`DEBUG`/`WARNING` call in the original codebase despite
-  being full of them. Now `LOG_LEVEL`-driven, JSON-formattable, with
-  automatic `run_id` correlation via contextvar.
-
-### Reliability ✅ (was ⚠️)
-- **Retry logic** — tenacity exponential backoff on every provider call
-  (Groq, Ollama, Tavily).
-- **Circuit breaker** — per-provider, protects against cascading slow
-  failures during an outage. `focused_research_agent/reliability/`
-- **Graceful shutdown** — lifespan tracks in-flight requests and waits
-  (bounded grace period) before the process exits.
-
-### Bonus, beyond the original list
-- **Reflection loop** — directly implements the project's own roadmap
-  item: thin initial search results trigger one bounded re-search with
-  refined queries. `nodes/reflect_and_refine.py`
-- **Concurrent search** — Tavily queries now run via `asyncio.gather`
-  instead of sequentially.
-- **Per-user data isolation** — conversations/reports are now scoped to
-  the authenticated user (`user_id` on `ConversationRun`), not globally
-  readable by anyone with a token.
-
-### Known debt — being honest about what this pass didn't finish
-- The original 175-test suite is written against the synchronous version
-  of this codebase and fails wholesale against the async conversion (sync
-  test functions calling now-async code without `await`). This is
-  mechanical, not a correctness problem in the app — confirmed separately
-  via live end-to-end testing (see `docs/verification.md`) — but updating
-  all 175 tests to `async def` + `await` + `AsyncMock` was not completed
-  in this pass. 18 new tests were added and pass, covering the new auth,
-  circuit breaker, and cache modules. Updating the remaining suite is the
-  single highest-value follow-up.
-
-## 🗺️ Roadmap
-
-- [x] Phase 1 — Core LangGraph workflow + FastAPI backend
-- [x] Phase 2 — Streamlit UI + UX polish
-- [x] Phase 3 — Conversational research with SQLite persistence
-- [x] Phase 4 — Full structured report generation mode
-- [x] Phase 5 — Image rendering from Tavily search results
-
-**Potential next steps:**
-- Async FastAPI endpoints for non-blocking long runs
-- PostgreSQL for multi-user production deployment
-- Task queue (Celery + Redis) for report generation
-- Authentication middleware
-- Rate limiting
-- Reflection loop — agent re-searches if initial results are insufficient
-
----
-
-## 🔌 Switching LLM Providers
-
-```bash
-# Groq (fast, free tier)
-LLM_PROVIDER=groq
-LLM_MODEL=llama-3.3-70b-versatile
-
-# Ollama Cloud
-LLM_PROVIDER=ollama
-LLM_MODEL=gpt-oss:20b-cloud
-
-# Ollama Local (no API key)
-LLM_PROVIDER=ollama
-LLM_MODEL=llama3.2:3b
-LLM_API_KEY=not-needed
-```
-
-Zero application code changes. The provider abstraction handles everything.
-
----
-
-## 👤 Author
-
-**Tushar Khoche**
-
-AI/ML Developer with a background in software engineering and test automation. Built this project to demonstrate production-grade AI system design — clean architecture, provider abstraction, state-based error routing, and comprehensive test coverage across a 6-layer LangGraph + FastAPI + Streamlit stack.
-
-[LinkedIn](https://linkedin.com/in/tusharkhoche) · [GitHub](https://github.com/tusharkhoche)
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.

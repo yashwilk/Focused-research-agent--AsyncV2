@@ -252,7 +252,7 @@ def test_get_llm_provider_returns_ollama_provider(monkeypatch):
             pass
 
     monkeypatch.setattr(llm_factory_module, "get_llm_config", fake_ollama_llm_config)
-    monkeypatch.setattr(ollama_module, "Client", FakeOllamaClient)
+    monkeypatch.setattr(ollama_module, "AsyncClient", FakeOllamaClient)
     monkeypatch.setattr(ollama_module, "get_llm_config", fake_ollama_llm_config)
 
     from focused_research_agent.services.llm_provider_ollama import OllamaLLMProvider

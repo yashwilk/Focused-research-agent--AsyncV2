@@ -31,7 +31,7 @@ class FakeLLM:
     def __init__(self, content: str):
         self._content = content
 
-    def invoke(self, prompt: str):
+    async def ainvoke(self, prompt: str):
         return SimpleNamespace(content=self._content)
 
 
@@ -40,7 +40,7 @@ class FakeTavilyClient:
         self._responses = responses
         self.calls = []
 
-    def search(
+    async def search(
         self,
         query: str,
         search_depth: str,
@@ -107,7 +107,7 @@ def build_shared_fake_tavily_client(fake_client: FakeTavilyClient):
     return fake_tavily_client
 
 
-def test_groq_generate_json_rejects_empty_prompt(monkeypatch):
+async def test_groq_generate_json_rejects_empty_prompt(monkeypatch):
     monkeypatch.setattr(llm_provider_module, "get_llm_config", fake_llm_config)
     monkeypatch.setattr(
         llm_provider_module,
@@ -118,10 +118,10 @@ def test_groq_generate_json_rejects_empty_prompt(monkeypatch):
     provider = GroqLLMProvider()
 
     with pytest.raises(ValueError, match="GroqLLMProvider: No prompt provided!"):
-        provider.generate_json("   ")
+        await provider.generate_json("   ")
 
 
-def test_groq_generate_json_parses_markdown_fenced_json(monkeypatch):
+async def test_groq_generate_json_parses_markdown_fenced_json(monkeypatch):
     monkeypatch.setattr(llm_provider_module, "get_llm_config", fake_llm_config)
     monkeypatch.setattr(
         llm_provider_module,
@@ -130,12 +130,12 @@ def test_groq_generate_json_parses_markdown_fenced_json(monkeypatch):
     )
 
     provider = GroqLLMProvider()
-    result = provider.generate_json("test prompt")
+    result = await provider.generate_json("test prompt")
 
     assert result == {"answer": "ok"}
 
 
-def test_groq_generate_json_parses_json_from_surrounding_text(monkeypatch):
+async def test_groq_generate_json_parses_json_from_surrounding_text(monkeypatch):
     monkeypatch.setattr(llm_provider_module, "get_llm_config", fake_llm_config)
     monkeypatch.setattr(
         llm_provider_module,
@@ -144,12 +144,12 @@ def test_groq_generate_json_parses_json_from_surrounding_text(monkeypatch):
     )
 
     provider = GroqLLMProvider()
-    result = provider.generate_json("test prompt")
+    result = await provider.generate_json("test prompt")
 
     assert result == {"answer": "ok"}
 
 
-def test_groq_generate_json_raises_when_no_json_found(monkeypatch):
+async def test_groq_generate_json_raises_when_no_json_found(monkeypatch):
     monkeypatch.setattr(llm_provider_module, "get_llm_config", fake_llm_config)
     monkeypatch.setattr(
         llm_provider_module,
@@ -160,38 +160,38 @@ def test_groq_generate_json_raises_when_no_json_found(monkeypatch):
     provider = GroqLLMProvider()
 
     with pytest.raises(ValueError, match="LLM did not return JSON"):
-        provider.generate_json("test prompt")
+        await provider.generate_json("test prompt")
 
 
-def test_tavily_search_rejects_non_list_queries(monkeypatch):
+async def test_tavily_search_rejects_non_list_queries(monkeypatch):
     monkeypatch.setattr(search_provider_module, "get_search_config", fake_search_config)
     monkeypatch.setattr(
         search_provider_module,
-        "TavilyClient",
+        "AsyncTavilyClient",
         build_fake_tavily_client([]),
     )
 
     provider = TavilySearchClient()
 
     with pytest.raises(ValueError, match="queries must be a list"):
-        provider.search("not-a-list")
+        await provider.search("not-a-list")
 
 
-def test_tavily_search_rejects_empty_query_string(monkeypatch):
+async def test_tavily_search_rejects_empty_query_string(monkeypatch):
     monkeypatch.setattr(search_provider_module, "get_search_config", fake_search_config)
     monkeypatch.setattr(
         search_provider_module,
-        "TavilyClient",
+        "AsyncTavilyClient",
         build_fake_tavily_client([]),
     )
 
     provider = TavilySearchClient()
 
     with pytest.raises(ValueError, match="Query must not be empty"):
-        provider.search(["valid query", "   "])
+        await provider.search(["valid query", "   "])
 
 
-def test_tavily_search_deduplicates_urls(monkeypatch):
+async def test_tavily_search_deduplicates_urls(monkeypatch):
     responses = [
         {
             "results": [
@@ -227,12 +227,12 @@ def test_tavily_search_deduplicates_urls(monkeypatch):
     monkeypatch.setattr(search_provider_module, "get_search_config", fake_search_config)
     monkeypatch.setattr(
         search_provider_module,
-        "TavilyClient",
+        "AsyncTavilyClient",
         build_shared_fake_tavily_client(fake_client),
     )
 
     provider = TavilySearchClient()
-    sources, images = provider.search(["query one", "query two"])  # ← unpack tuple
+    sources, images = await provider.search(["query one", "query two"])  # ← unpack tuple
 
     assert len(sources) == 2
     assert sources[0]["url"] == "https://example.com/a"
@@ -241,7 +241,7 @@ def test_tavily_search_deduplicates_urls(monkeypatch):
     assert images == []
 
 
-def test_tavily_search_raises_on_invalid_response_shape(monkeypatch):
+async def test_tavily_search_raises_on_invalid_response_shape(monkeypatch):
     responses = [
         {"unexpected_key": []},
     ]
@@ -249,17 +249,17 @@ def test_tavily_search_raises_on_invalid_response_shape(monkeypatch):
     monkeypatch.setattr(search_provider_module, "get_search_config", fake_search_config)
     monkeypatch.setattr(
         search_provider_module,
-        "TavilyClient",
+        "AsyncTavilyClient",
         build_fake_tavily_client(responses),
     )
 
     provider = TavilySearchClient()
 
     with pytest.raises(ValueError, match="Tavily response missing valid results"):
-        provider.search(["query one"])
+        await provider.search(["query one"])
 
 
-def test_tavily_search_raises_when_score_missing(monkeypatch):
+async def test_tavily_search_raises_when_score_missing(monkeypatch):
     responses = [
         {
             "results": [
@@ -275,14 +275,14 @@ def test_tavily_search_raises_when_score_missing(monkeypatch):
     monkeypatch.setattr(search_provider_module, "get_search_config", fake_search_config)
     monkeypatch.setattr(
         search_provider_module,
-        "TavilyClient",
+        "AsyncTavilyClient",
         build_fake_tavily_client(responses),
     )
 
     provider = TavilySearchClient()
 
     with pytest.raises(ValueError, match="Result missing score"):
-        provider.search(["query one"])
+        await provider.search(["query one"])
 
 
 def test_tavily_client_overrides_search_depth_when_provided(monkeypatch):
@@ -293,7 +293,7 @@ def test_tavily_client_overrides_search_depth_when_provided(monkeypatch):
     )
     monkeypatch.setattr(
         search_provider_module,  # ← same here
-        "TavilyClient",
+        "AsyncTavilyClient",
         build_fake_tavily_client(
             []
         ),  # ← use build_fake_tavily_client, not FakeTavilyClient directly
@@ -320,88 +320,90 @@ def build_fake_ollama_client_class(content: str):
         def __init__(self, **kwargs):
             pass
 
-        def chat(self, model: str, messages: list):
+        async def chat(self, model: str, messages: list):
             return SimpleNamespace(message=SimpleNamespace(content=content))
 
     return _FakeClient
 
 
-def test_ollama_generate_json_rejects_empty_prompt(monkeypatch):
+async def test_ollama_generate_json_rejects_empty_prompt(monkeypatch):
     monkeypatch.setattr(
         ollama_provider_module, "get_llm_config", fake_ollama_llm_config
     )
     monkeypatch.setattr(
-        ollama_provider_module, "Client", build_fake_ollama_client_class('{"ok": true}')
+        ollama_provider_module,
+        "AsyncClient",
+        build_fake_ollama_client_class('{"ok": true}'),
     )
 
     provider = OllamaLLMProvider()
 
     with pytest.raises(ValueError, match="OllamaLLMProvider: No prompt provided!"):
-        provider.generate_json("   ")
+        await provider.generate_json("   ")
 
 
-def test_ollama_generate_json_parses_valid_json(monkeypatch):
+async def test_ollama_generate_json_parses_valid_json(monkeypatch):
     monkeypatch.setattr(
         ollama_provider_module, "get_llm_config", fake_ollama_llm_config
     )
     monkeypatch.setattr(
         ollama_provider_module,
-        "Client",
+        "AsyncClient",
         build_fake_ollama_client_class('{"answer": "ok"}'),
     )
 
     provider = OllamaLLMProvider()
-    result = provider.generate_json("test prompt")
+    result = await provider.generate_json("test prompt")
 
     assert result == {"answer": "ok"}
 
 
-def test_ollama_generate_json_parses_fenced_json(monkeypatch):
+async def test_ollama_generate_json_parses_fenced_json(monkeypatch):
     monkeypatch.setattr(
         ollama_provider_module, "get_llm_config", fake_ollama_llm_config
     )
     monkeypatch.setattr(
         ollama_provider_module,
-        "Client",
+        "AsyncClient",
         build_fake_ollama_client_class('```json\n{"answer": "ok"}\n```'),
     )
 
     provider = OllamaLLMProvider()
-    result = provider.generate_json("test prompt")
+    result = await provider.generate_json("test prompt")
 
     assert result == {"answer": "ok"}
 
 
-def test_ollama_generate_json_parses_json_from_surrounding_text(monkeypatch):
+async def test_ollama_generate_json_parses_json_from_surrounding_text(monkeypatch):
     monkeypatch.setattr(
         ollama_provider_module, "get_llm_config", fake_ollama_llm_config
     )
     monkeypatch.setattr(
         ollama_provider_module,
-        "Client",
+        "AsyncClient",
         build_fake_ollama_client_class('Here is the result: {"answer": "ok"} Thanks!'),
     )
 
     provider = OllamaLLMProvider()
-    result = provider.generate_json("test prompt")
+    result = await provider.generate_json("test prompt")
 
     assert result == {"answer": "ok"}
 
 
-def test_ollama_generate_json_raises_when_no_json_found(monkeypatch):
+async def test_ollama_generate_json_raises_when_no_json_found(monkeypatch):
     monkeypatch.setattr(
         ollama_provider_module, "get_llm_config", fake_ollama_llm_config
     )
     monkeypatch.setattr(
         ollama_provider_module,
-        "Client",
+        "AsyncClient",
         build_fake_ollama_client_class("plain text without any json structure"),
     )
 
     provider = OllamaLLMProvider()
 
     with pytest.raises(ValueError, match="LLM did not return JSON"):
-        provider.generate_json("test prompt")
+        await provider.generate_json("test prompt")
 
 
 def test_ollama_uses_cloud_client_when_api_key_provided(monkeypatch):
@@ -415,13 +417,13 @@ def test_ollama_uses_cloud_client_when_api_key_provided(monkeypatch):
         def __init__(self, **kwargs):
             captured_kwargs.update(kwargs)
 
-        def chat(self, model: str, messages: list):
+        async def chat(self, model: str, messages: list):
             return SimpleNamespace(message=SimpleNamespace(content='{"ok": true}'))
 
     monkeypatch.setattr(
         ollama_provider_module, "get_llm_config", fake_ollama_llm_config
     )
-    monkeypatch.setattr(ollama_provider_module, "Client", FakeCloudClient)
+    monkeypatch.setattr(ollama_provider_module, "AsyncClient", FakeCloudClient)
 
     OllamaLLMProvider()
 

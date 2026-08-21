@@ -26,10 +26,9 @@ Why it matters:
 """
 
 import pytest
-from focused_research_agent.database.model import Base, ConversationRun
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import select
 
+from focused_research_agent.database.model import ConversationRun
 from focused_research_agent.database.repository import (
     _deserialize,
     _serialize,
@@ -41,38 +40,10 @@ from focused_research_agent.database.repository import (
 
 # ---------------------------------------------------------------------------
 # Fixtures
+#
+# The `db` fixture (an isolated async in-memory session, fresh per test) is
+# defined in tests/conftest.py and shared across the test suite.
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def db() -> Session:
-    """
-    Create a fresh in-memory SQLite database and session for each test.
-
-    Uses SQLite in-memory mode (sqlite:///:memory:) so no files are
-    created on disk and the database is automatically destroyed when
-    the test finishes. Creates all tables before the test and yields
-    a session ready to use.
-
-    Yields:
-        Session: An active SQLAlchemy session connected to the
-            in-memory database.
-    """
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(bind=engine)
-    TestingSessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine,
-    )
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
 
 
 @pytest.fixture
@@ -151,31 +122,31 @@ def sample_followup_state() -> dict:
 # ---------------------------------------------------------------------------
 
 
-def test_serialize_returns_json_string_for_list():
+async def test_serialize_returns_json_string_for_list():
     result = _serialize(["query one", "query two"])
 
     assert result == '["query one", "query two"]'
 
 
-def test_serialize_returns_none_for_none():
+async def test_serialize_returns_none_for_none():
     result = _serialize(None)
 
     assert result is None
 
 
-def test_deserialize_returns_list_for_json_string():
+async def test_deserialize_returns_list_for_json_string():
     result = _deserialize('["query one", "query two"]')
 
     assert result == ["query one", "query two"]
 
 
-def test_deserialize_returns_none_for_none():
+async def test_deserialize_returns_none_for_none():
     result = _deserialize(None)
 
     assert result is None
 
 
-def test_serialize_then_deserialize_roundtrip():
+async def test_serialize_then_deserialize_roundtrip():
     original = ["query one", "query two", "query three"]
 
     assert _deserialize(_serialize(original)) == original
@@ -186,18 +157,19 @@ def test_serialize_then_deserialize_roundtrip():
 # ---------------------------------------------------------------------------
 
 
-def test_save_run_creates_row_in_database(db, sample_state):
-    save_run(
+async def test_save_run_creates_row_in_database(db, sample_state):
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
-    count = db.query(ConversationRun).count()
+    result = await db.execute(select(ConversationRun))
+    count = len(result.scalars().all())
 
     assert count == 1
 
 
-def test_save_run_returns_conversation_run_with_id(db, sample_state):
-    result = save_run(
+async def test_save_run_returns_conversation_run_with_id(db, sample_state):
+    result = await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
@@ -205,8 +177,8 @@ def test_save_run_returns_conversation_run_with_id(db, sample_state):
     assert result.id is not None
 
 
-def test_save_run_stores_correct_field_values(db, sample_state):
-    result = save_run(
+async def test_save_run_stores_correct_field_values(db, sample_state):
+    result = await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
@@ -219,18 +191,18 @@ def test_save_run_stores_correct_field_values(db, sample_state):
     assert result.turn_number == 1
 
 
-def test_save_run_sets_conversation_title_on_turn_1(db, sample_state):
-    result = save_run(
+async def test_save_run_sets_conversation_title_on_turn_1(db, sample_state):
+    result = await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
     assert result.conversation_title == "What is quantum computing?"
 
 
-def test_save_run_does_not_set_conversation_title_after_turn_1(
+async def test_save_run_does_not_set_conversation_title_after_turn_1(
     db, sample_followup_state
 ):
-    result = save_run(
+    result = await save_run(
         db,
         sample_followup_state,
         conversation_id="conv-abc",
@@ -241,7 +213,7 @@ def test_save_run_does_not_set_conversation_title_after_turn_1(
     assert result.conversation_title is None
 
 
-def test_save_run_truncates_title_to_60_characters(db):
+async def test_save_run_truncates_title_to_60_characters(db):
     long_question_state = {
         "run_id": "run-long",
         "question": "A" * 100,
@@ -254,7 +226,7 @@ def test_save_run_truncates_title_to_60_characters(db):
         "errors": [],
     }
 
-    result = save_run(
+    result = await save_run(
         db,
         long_question_state,
         conversation_id="conv-abc",
@@ -265,8 +237,8 @@ def test_save_run_truncates_title_to_60_characters(db):
     assert len(result.conversation_title) == 60
 
 
-def test_save_run_serializes_list_fields(db, sample_state):
-    result = save_run(
+async def test_save_run_serializes_list_fields(db, sample_state):
+    result = await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
@@ -278,7 +250,7 @@ def test_save_run_serializes_list_fields(db, sample_state):
     assert result.errors == "[]"
 
 
-def test_save_run_handles_none_list_fields(db):
+async def test_save_run_handles_none_list_fields(db):
     minimal_state = {
         "run_id": "run-minimal",
         "question": "What is AI?",
@@ -291,7 +263,7 @@ def test_save_run_handles_none_list_fields(db):
         "errors": ["init_run: No question provided"],
     }
 
-    result = save_run(
+    result = await save_run(
         db, minimal_state, conversation_id="conv-xyz", turn_number=1, mode="research"
     )
 
@@ -300,8 +272,8 @@ def test_save_run_handles_none_list_fields(db):
     assert result.citations is None
 
 
-def test_save_run_sets_created_at_and_updated_at(db, sample_state):
-    result = save_run(
+async def test_save_run_sets_created_at_and_updated_at(db, sample_state):
+    result = await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
@@ -314,13 +286,13 @@ def test_save_run_sets_created_at_and_updated_at(db, sample_state):
 # ---------------------------------------------------------------------------
 
 
-def test_get_conversation_history_returns_turns_in_chronological_order(
+async def test_get_conversation_history_returns_turns_in_chronological_order(
     db, sample_state, sample_followup_state
 ):
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db,
         sample_followup_state,
         conversation_id="conv-abc",
@@ -328,19 +300,19 @@ def test_get_conversation_history_returns_turns_in_chronological_order(
         mode="research",
     )
 
-    history = get_conversation_history(db, conversation_id="conv-abc", max_turns=5)
+    history = await get_conversation_history(db, conversation_id="conv-abc", max_turns=5)
 
     assert len(history) == 2
     assert history[0]["turn"] == 1
     assert history[1]["turn"] == 2
 
 
-def test_get_conversation_history_returns_correct_fields(db, sample_state):
-    save_run(
+async def test_get_conversation_history_returns_correct_fields(db, sample_state):
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
-    history = get_conversation_history(db, conversation_id="conv-abc", max_turns=5)
+    history = await get_conversation_history(db, conversation_id="conv-abc", max_turns=5)
 
     assert history[0]["question"] == "What is quantum computing?"
     assert (
@@ -349,13 +321,13 @@ def test_get_conversation_history_returns_correct_fields(db, sample_state):
     assert history[0]["scope"] == "Explain quantum computing clearly"
 
 
-def test_get_conversation_history_respects_max_turns_limit(
+async def test_get_conversation_history_respects_max_turns_limit(
     db, sample_state, sample_followup_state
 ):
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db,
         sample_followup_state,
         conversation_id="conv-abc",
@@ -363,29 +335,29 @@ def test_get_conversation_history_respects_max_turns_limit(
         mode="research",
     )
 
-    history = get_conversation_history(db, conversation_id="conv-abc", max_turns=1)
+    history = await get_conversation_history(db, conversation_id="conv-abc", max_turns=1)
 
     assert len(history) == 1
     assert history[0]["turn"] == 2
 
 
-def test_get_conversation_history_returns_empty_list_for_unknown_conversation(
+async def test_get_conversation_history_returns_empty_list_for_unknown_conversation(
     db,
 ):
-    history = get_conversation_history(
+    history = await get_conversation_history(
         db, conversation_id="conv-does-not-exist", max_turns=5
     )
 
     assert history == []
 
 
-def test_get_conversation_history_only_returns_turns_for_given_conversation(
+async def test_get_conversation_history_only_returns_turns_for_given_conversation(
     db, sample_state, sample_followup_state
 ):
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db,
         sample_followup_state,
         conversation_id="conv-xyz",
@@ -393,7 +365,7 @@ def test_get_conversation_history_only_returns_turns_for_given_conversation(
         mode="research",
     )
 
-    history = get_conversation_history(db, conversation_id="conv-abc", max_turns=5)
+    history = await get_conversation_history(db, conversation_id="conv-abc", max_turns=5)
 
     assert len(history) == 1
     assert history[0]["question"] == "What is quantum computing?"
@@ -404,53 +376,53 @@ def test_get_conversation_history_only_returns_turns_for_given_conversation(
 # ---------------------------------------------------------------------------
 
 
-def test_get_all_conversations_returns_empty_list_when_no_data(db):
-    result = get_all_conversations(db)
+async def test_get_all_conversations_returns_empty_list_when_no_data(db):
+    result = await get_all_conversations(db)
 
     assert result == []
 
 
-def test_get_all_conversations_returns_one_entry_per_conversation(
+async def test_get_all_conversations_returns_one_entry_per_conversation(
     db, sample_state, sample_followup_state
 ):
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db,
         sample_followup_state,
         conversation_id="conv-abc",
         turn_number=2,
         mode="research",
     )
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-xyz", turn_number=1, mode="research"
     )
 
-    result = get_all_conversations(db)
+    result = await get_all_conversations(db)
 
     assert len(result) == 2
 
 
-def test_get_all_conversations_returns_correct_fields(db, sample_state):
-    save_run(
+async def test_get_all_conversations_returns_correct_fields(db, sample_state):
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
-    result = get_all_conversations(db)
+    result = await get_all_conversations(db)
 
     assert result[0]["conversation_id"] == "conv-abc"
     assert result[0]["title"] == "What is quantum computing?"
     assert "created_at" in result[0]
 
 
-def test_get_all_conversations_returns_newest_first(
+async def test_get_all_conversations_returns_newest_first(
     db, sample_state, sample_followup_state
 ):
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-first", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db,
         sample_followup_state,
         conversation_id="conv-second",
@@ -458,7 +430,7 @@ def test_get_all_conversations_returns_newest_first(
         mode="research",
     )
 
-    result = get_all_conversations(db)
+    result = await get_all_conversations(db)
 
     assert result[0]["conversation_id"] == "conv-second"
     assert result[1]["conversation_id"] == "conv-first"
@@ -469,21 +441,21 @@ def test_get_all_conversations_returns_newest_first(
 # ---------------------------------------------------------------------------
 
 
-def test_get_conversation_turns_returns_empty_list_for_unknown_conversation(
+async def test_get_conversation_turns_returns_empty_list_for_unknown_conversation(
     db,
 ):
-    result = get_conversation_turns(db, conversation_id="conv-unknown")
+    result = await get_conversation_turns(db, conversation_id="conv-unknown")
 
     assert result == []
 
 
-def test_get_conversation_turns_returns_all_turns_in_order(
+async def test_get_conversation_turns_returns_all_turns_in_order(
     db, sample_state, sample_followup_state
 ):
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db,
         sample_followup_state,
         conversation_id="conv-abc",
@@ -491,19 +463,19 @@ def test_get_conversation_turns_returns_all_turns_in_order(
         mode="research",
     )
 
-    result = get_conversation_turns(db, conversation_id="conv-abc")
+    result = await get_conversation_turns(db, conversation_id="conv-abc")
 
     assert len(result) == 2
     assert result[0]["turn_number"] == 1
     assert result[1]["turn_number"] == 2
 
 
-def test_get_conversation_turns_deserializes_list_fields(db, sample_state):
-    save_run(
+async def test_get_conversation_turns_deserializes_list_fields(db, sample_state):
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
-    result = get_conversation_turns(db, conversation_id="conv-abc")
+    result = await get_conversation_turns(db, conversation_id="conv-abc")
 
     assert result[0]["queries"] == [
         "quantum computing overview",
@@ -514,12 +486,12 @@ def test_get_conversation_turns_deserializes_list_fields(db, sample_state):
     assert result[0]["errors"] == []
 
 
-def test_get_conversation_turns_returns_correct_fields(db, sample_state):
-    save_run(
+async def test_get_conversation_turns_returns_correct_fields(db, sample_state):
+    await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="research"
     )
 
-    result = get_conversation_turns(db, conversation_id="conv-abc")
+    result = await get_conversation_turns(db, conversation_id="conv-abc")
 
     assert result[0]["run_id"] == "run-test-123"
     assert result[0]["question"] == "What is quantum computing?"
@@ -528,54 +500,54 @@ def test_get_conversation_turns_returns_correct_fields(db, sample_state):
     assert "created_at" in result[0]
 
 
-def test_save_run_stores_mode_field(db, sample_state):
-    result = save_run(
+async def test_save_run_stores_mode_field(db, sample_state):
+    result = await save_run(
         db, sample_state, conversation_id="conv-abc", turn_number=1, mode="report"
     )
     assert result.mode == "report"
 
 
-def test_get_all_reports_returns_empty_list_when_no_data(db):
+async def test_get_all_reports_returns_empty_list_when_no_data(db):
     from focused_research_agent.database.repository import get_all_reports
 
-    result = get_all_reports(db)
+    result = await get_all_reports(db)
     assert result == []
 
 
-def test_get_all_reports_returns_only_report_mode_runs(db, sample_state):
+async def test_get_all_reports_returns_only_report_mode_runs(db, sample_state):
     from focused_research_agent.database.repository import get_all_reports
 
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-chat", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-report", turn_number=1, mode="report"
     )
-    result = get_all_reports(db)
+    result = await get_all_reports(db)
     assert len(result) == 1
     assert result[0]["conversation_id"] == "conv-report"
 
 
-def test_get_all_reports_returns_correct_fields(db, sample_state):
+async def test_get_all_reports_returns_correct_fields(db, sample_state):
     from focused_research_agent.database.repository import get_all_reports
 
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-report", turn_number=1, mode="report"
     )
-    result = get_all_reports(db)
+    result = await get_all_reports(db)
     assert result[0]["conversation_id"] == "conv-report"
     assert result[0]["title"] == "What is quantum computing?"
     assert "created_at" in result[0]
 
 
-def test_save_run_stores_and_retrieves_images(db, sample_state):
+async def test_save_run_stores_and_retrieves_images(db, sample_state):
     """
     Verify that images are serialized on save and deserialized
     correctly when turns are retrieved.
     """
-    save_run(db, sample_state, conversation_id="conv-img", turn_number=1)
+    await save_run(db, sample_state, conversation_id="conv-img", turn_number=1)
 
-    turns = get_conversation_turns(db, "conv-img")
+    turns = await get_conversation_turns(db, "conv-img")
 
     assert turns[0]["images"] == [
         "https://example.com/image1.jpg",
@@ -583,28 +555,28 @@ def test_save_run_stores_and_retrieves_images(db, sample_state):
     ]
 
 
-def test_save_run_handles_none_images(db, sample_state):
+async def test_save_run_handles_none_images(db, sample_state):
     """
     Verify that None images is handled gracefully — stored as
     null and returned as None.
     """
     sample_state["images"] = None
-    save_run(db, sample_state, conversation_id="conv-no-img", turn_number=1)
+    await save_run(db, sample_state, conversation_id="conv-no-img", turn_number=1)
 
-    turns = get_conversation_turns(db, "conv-no-img")
+    turns = await get_conversation_turns(db, "conv-no-img")
 
     assert turns[0]["images"] is None
 
 
-def test_get_all_conversations_excludes_report_runs(db, sample_state):
-    save_run(
+async def test_get_all_conversations_excludes_report_runs(db, sample_state):
+    await save_run(
         db, sample_state, conversation_id="conv-chat", turn_number=1, mode="research"
     )
-    save_run(
+    await save_run(
         db, sample_state, conversation_id="conv-report", turn_number=1, mode="report"
     )
 
-    result = get_all_conversations(db)
+    result = await get_all_conversations(db)
 
     assert len(result) == 1
     assert result[0]["conversation_id"] == "conv-chat"

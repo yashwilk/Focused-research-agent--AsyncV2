@@ -23,47 +23,67 @@ Why it matters:
 - Confirms the conversations endpoints return correctly shaped data
 """
 
+import itertools
+
 import pytest
 from fastapi.testclient import TestClient
-from focused_research_agent.database.model import Base
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import select
 
 from focused_research_agent.api.app import create_app
 from focused_research_agent.api.dependencies import get_chat_use_case
 from focused_research_agent.application.exceptions import ApplicationError
 from focused_research_agent.database.database import get_db
+from focused_research_agent.database.model import User
 from focused_research_agent.database.repository import save_run
 
 app = create_app()
 client = TestClient(app)
 
-
-# ---------------------------------------------------------------------------
-# In-memory database fixture for conversations endpoint tests
-# ---------------------------------------------------------------------------
+_email_counter = itertools.count()
 
 
-@pytest.fixture
-def db_session() -> Session:
-    engine = create_engine(
-        "sqlite:///file::memory:?cache=shared&uri=true",
-        connect_args={"check_same_thread": False},
+def _auth_headers() -> dict:
+    """
+    Register a fresh test user and return an Authorization header with a
+    bearer token for it.
+
+    Returns:
+        dict: Header dict suitable for passing as `headers=` to a request.
+    """
+    email = f"chat-test-{next(_email_counter)}@example.com"
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "strongpass1"},
     )
-    Base.metadata.create_all(bind=engine)
-    TestingSessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine,
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def _register_user_in_db(db, email: str) -> User:
+    """
+    Register a test user against the currently-overridden get_db session and
+    return the resulting User row (with its id populated) plus auth headers.
+
+    This must be called only while `get_db` is overridden to yield `db`, so
+    the registration writes into the same isolated per-test database that
+    seeded conversation rows will use.
+
+    Args:
+        db: The isolated async session (from the `db` fixture) currently
+            wired up as the override for get_db.
+        email: Unique email to register.
+
+    Returns:
+        User: The newly created user row.
+    """
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "strongpass1"},
     )
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-        # Clean up all rows after each test to prevent contamination
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
+    token = response.json()["access_token"]
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one()
+    return user, {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
@@ -100,10 +120,11 @@ def sample_state() -> dict:
 # ---------------------------------------------------------------------------
 
 
-def fake_success_chat_turn(
-    db: Session,
+async def fake_success_chat_turn(
+    db,
     conversation_id: str | None,
     question: str,
+    user_id: int | None = None,
 ) -> dict:
     """Return a successful mock chat response."""
     return {
@@ -130,10 +151,11 @@ def fake_success_chat_turn(
     }
 
 
-def fake_error_chat_turn(
-    db: Session,
+async def fake_error_chat_turn(
+    db,
     conversation_id: str | None,
     question: str,
+    user_id: int | None = None,
 ) -> dict:
     """Return an error-shaped mock chat response."""
     return {
@@ -168,6 +190,7 @@ def test_chat_returns_structured_success_response():
         response = client.post(
             "/api/v1/chat",
             json={"question": "Tell me about AI"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200
@@ -196,6 +219,7 @@ def test_chat_returns_error_response_shape():
         response = client.post(
             "/api/v1/chat",
             json={"question": "Trigger graph error"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200
@@ -225,6 +249,7 @@ def test_chat_accepts_conversation_id_in_request():
                 "question": "Tell me about AI",
                 "conversation_id": "conv-existing-abc",
             },
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200

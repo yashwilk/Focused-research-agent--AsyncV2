@@ -7,6 +7,8 @@ used by the route so the tests can focus on API behavior without invoking
 the real research workflow.
 """
 
+import itertools
+
 from fastapi.testclient import TestClient
 
 from focused_research_agent.api.app import create_app
@@ -16,8 +18,27 @@ from focused_research_agent.application.exceptions import ApplicationError
 app = create_app()
 client = TestClient(app)
 
+_email_counter = itertools.count()
 
-def fake_success_research_question(question: str) -> dict:
+
+def _auth_headers() -> dict:
+    """
+    Register a fresh test user and return an Authorization header with a
+    bearer token for it.
+
+    Returns:
+        dict: Header dict suitable for passing as `headers=` to a request.
+    """
+    email = f"research-test-{next(_email_counter)}@example.com"
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "strongpass1"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def fake_success_research_question(question: str) -> dict:
     """
     Return a successful mock research response.
 
@@ -63,7 +84,7 @@ def fake_success_research_question(question: str) -> dict:
     }
 
 
-def fake_error_research_question(question: str) -> dict:
+async def fake_error_research_question(question: str) -> dict:
     """
     Return an error-shaped mock research response.
 
@@ -101,6 +122,7 @@ def test_research_returns_structured_success_response():
         response = client.post(
             "/api/v1/research",
             json={"question": "Tell me about AI agents"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200
@@ -145,6 +167,7 @@ def test_research_returns_error_response_shape():
         response = client.post(
             "/api/v1/research",
             json={"question": "Trigger graph error"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200
@@ -169,7 +192,9 @@ def test_research_rejects_empty_question():
     Verify that the versioned route rejects an empty question at the API
     validation layer.
     """
-    response = client.post("/api/v1/research", json={"question": ""})
+    response = client.post(
+        "/api/v1/research", json={"question": ""}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
@@ -179,7 +204,9 @@ def test_research_rejects_whitespace_only_question():
     Verify that the versioned route rejects a whitespace-only question at the
     API validation layer.
     """
-    response = client.post("/api/v1/research", json={"question": "   "})
+    response = client.post(
+        "/api/v1/research", json={"question": "   "}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
@@ -189,7 +216,9 @@ def test_research_rejects_missing_question():
     Verify that the versioned route rejects a request body with no question
     field.
     """
-    response = client.post("/api/v1/research", json={})
+    response = client.post(
+        "/api/v1/research", json={}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
@@ -199,7 +228,9 @@ def test_research_rejects_wrong_question_type():
     Verify that the versioned route rejects a request where question has the
     wrong type.
     """
-    response = client.post("/api/v1/research", json={"question": 123})
+    response = client.post(
+        "/api/v1/research", json={"question": 123}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
@@ -209,7 +240,9 @@ def test_research_rejects_punctuation_only_question():
     Verify that the versioned route rejects punctuation-only input at the API
     validation layer.
     """
-    response = client.post("/api/v1/research", json={"question": "."})
+    response = client.post(
+        "/api/v1/research", json={"question": "."}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
@@ -219,7 +252,9 @@ def test_research_rejects_ultra_short_question():
     Verify that the versioned route rejects meaningless ultra-short input at
     the API validation layer.
     """
-    response = client.post("/api/v1/research", json={"question": "a"})
+    response = client.post(
+        "/api/v1/research", json={"question": "a"}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
@@ -230,7 +265,7 @@ def test_research_returns_structured_400_for_application_error():
     error JSON shape when the injected use case raises ApplicationError.
     """
 
-    def fake_application_error_use_case(question: str) -> dict:
+    async def fake_application_error_use_case(question: str) -> dict:
         raise ApplicationError("User query must not be empty")
 
     app.dependency_overrides[get_research_use_case] = lambda: (
@@ -241,6 +276,7 @@ def test_research_returns_structured_400_for_application_error():
         response = client.post(
             "/api/v1/research",
             json={"question": "Valid looking question"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 400
@@ -261,7 +297,7 @@ def test_research_returns_structured_500_for_unexpected_exception():
     exception.
     """
 
-    def fake_unexpected_error_use_case(question: str) -> dict:
+    async def fake_unexpected_error_use_case(question: str) -> dict:
         raise RuntimeError("Unexpected test failure")
 
     app.dependency_overrides[get_research_use_case] = lambda: (
@@ -274,6 +310,7 @@ def test_research_returns_structured_500_for_unexpected_exception():
         response = local_client.post(
             "/api/v1/research",
             json={"question": "Valid looking question"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 500

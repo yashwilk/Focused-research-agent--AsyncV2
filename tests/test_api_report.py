@@ -19,6 +19,8 @@ Why it matters:
 - Confirms the structured markdown answer passes through the API correctly
 """
 
+import itertools
+
 from fastapi.testclient import TestClient
 
 from focused_research_agent.api.app import create_app
@@ -28,13 +30,32 @@ from focused_research_agent.application.exceptions import ApplicationError
 app = create_app()
 client = TestClient(app)
 
+_email_counter = itertools.count()
+
+
+def _auth_headers() -> dict:
+    """
+    Register a fresh test user and return an Authorization header with a
+    bearer token for it.
+
+    Returns:
+        dict: Header dict suitable for passing as `headers=` to a request.
+    """
+    email = f"report-test-{next(_email_counter)}@example.com"
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "strongpass1"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
 
 # ---------------------------------------------------------------------------
 # Fake use case functions
 # ---------------------------------------------------------------------------
 
 
-def fake_success_report(question: str, db) -> dict:
+async def fake_success_report(question: str, db, user_id: int | None = None) -> dict:
     """Return a successful mock report response."""
     return {
         "run_id": "run-report-123",
@@ -66,7 +87,7 @@ def fake_success_report(question: str, db) -> dict:
     }
 
 
-def fake_error_report(question: str, db) -> dict:
+async def fake_error_report(question: str, db, user_id: int | None = None) -> dict:
     """Return an error-shaped mock report response."""
     return {
         "run_id": "run-report-error",
@@ -98,6 +119,7 @@ def test_report_returns_structured_success_response():
         response = client.post(
             "/api/v1/report",
             json={"question": "Tell me about quantum computing"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200
@@ -124,6 +146,7 @@ def test_report_answer_contains_structured_sections():
         response = client.post(
             "/api/v1/report",
             json={"question": "Tell me about quantum computing"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200
@@ -149,6 +172,7 @@ def test_report_returns_error_response_shape():
         response = client.post(
             "/api/v1/report",
             json={"question": "Trigger graph error"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 200
@@ -169,28 +193,36 @@ def test_report_returns_error_response_shape():
 
 def test_report_rejects_empty_question():
     """Verify that the report route rejects an empty question."""
-    response = client.post("/api/v1/report", json={"question": ""})
+    response = client.post(
+        "/api/v1/report", json={"question": ""}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
 
 def test_report_rejects_whitespace_only_question():
     """Verify that the report route rejects a whitespace-only question."""
-    response = client.post("/api/v1/report", json={"question": "   "})
+    response = client.post(
+        "/api/v1/report", json={"question": "   "}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
 
 def test_report_rejects_missing_question():
     """Verify that the report route rejects a request with no question."""
-    response = client.post("/api/v1/report", json={})
+    response = client.post(
+        "/api/v1/report", json={}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
 
 def test_report_rejects_punctuation_only_question():
     """Verify that the report route rejects punctuation-only input."""
-    response = client.post("/api/v1/report", json={"question": "..."})
+    response = client.post(
+        "/api/v1/report", json={"question": "..."}, headers=_auth_headers()
+    )
 
     assert response.status_code == 422
 
@@ -206,7 +238,9 @@ def test_report_returns_structured_400_for_application_error():
     JSON shape when the use case raises ApplicationError.
     """
 
-    def fake_application_error_use_case(question: str, db) -> dict:
+    async def fake_application_error_use_case(
+        question: str, db, user_id: int | None = None
+    ) -> dict:
         raise ApplicationError("User query must not be empty")
 
     app.dependency_overrides[get_report_use_case] = lambda: (
@@ -217,6 +251,7 @@ def test_report_returns_structured_400_for_application_error():
         response = client.post(
             "/api/v1/report",
             json={"question": "Valid looking question"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 400
@@ -236,7 +271,9 @@ def test_report_returns_structured_500_for_unexpected_exception():
     JSON shape when the use case raises an unexpected exception.
     """
 
-    def fake_unexpected_error_use_case(question: str, db) -> dict:
+    async def fake_unexpected_error_use_case(
+        question: str, db, user_id: int | None = None
+    ) -> dict:
         raise RuntimeError("Unexpected test failure")
 
     app.dependency_overrides[get_report_use_case] = lambda: (
@@ -249,6 +286,7 @@ def test_report_returns_structured_500_for_unexpected_exception():
         response = local_client.post(
             "/api/v1/report",
             json={"question": "Valid looking question"},
+            headers=_auth_headers(),
         )
 
         assert response.status_code == 500

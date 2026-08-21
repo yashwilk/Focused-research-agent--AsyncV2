@@ -22,9 +22,6 @@ Why it matters:
 """
 
 import pytest
-from focused_research_agent.database.model import Base
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 
 import focused_research_agent.application.report_use_case as report_use_case_module
 from focused_research_agent.application.exceptions import ApplicationError
@@ -32,33 +29,10 @@ from focused_research_agent.application.report_use_case import execute_report
 
 # ---------------------------------------------------------------------------
 # Fixtures
+#
+# The `db` fixture (an isolated async in-memory session, fresh per test) is
+# defined in tests/conftest.py and shared across the test suite.
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def db() -> Session:
-    """
-    Create a fresh in-memory SQLite database and session for each test.
-
-    Yields:
-        Session: An active SQLAlchemy session connected to the
-            in-memory database.
-    """
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(bind=engine)
-    TestingSessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine,
-    )
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +50,7 @@ class FakeGraph:
     def __init__(self):
         self.captured_initial_state = None
 
-    def invoke(self, initial_state: dict) -> dict:
+    async def ainvoke(self, initial_state: dict) -> dict:
         """
         Capture the initial state and return a fixed successful result.
 
@@ -143,25 +117,25 @@ def fake_build_graph(search_depth: str | None = None):
 # ---------------------------------------------------------------------------
 
 
-def test_execute_report_raises_for_empty_question(db, monkeypatch):
+async def test_execute_report_raises_for_empty_question(db, monkeypatch):
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
     with pytest.raises(ApplicationError, match="No user query provided"):
-        execute_report(question="   ", db=db)
+        await execute_report(question="   ", db=db)
 
 
-def test_execute_report_raises_for_non_string_question(db, monkeypatch):
+async def test_execute_report_raises_for_non_string_question(db, monkeypatch):
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
     with pytest.raises(ApplicationError, match="User query must be a string"):
-        execute_report(question=123, db=db)  # type: ignore
+        await execute_report(question=123, db=db)  # type: ignore
 
 
-def test_execute_report_raises_for_punctuation_only_question(db, monkeypatch):
+async def test_execute_report_raises_for_punctuation_only_question(db, monkeypatch):
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
     with pytest.raises(ApplicationError):
-        execute_report(question="...", db=db)
+        await execute_report(question="...", db=db)
 
 
 # ---------------------------------------------------------------------------
@@ -169,27 +143,27 @@ def test_execute_report_raises_for_punctuation_only_question(db, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_execute_report_sets_mode_to_report(db, monkeypatch):
+async def test_execute_report_sets_mode_to_report(db, monkeypatch):
     """
     Verify that execute_report sets mode='report' in the initial state
     before invoking the graph.
     """
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
-    execute_report(question="What is quantum computing?", db=db)
+    await execute_report(question="What is quantum computing?", db=db)
 
     assert _fake_graph_instance is not None
     assert _fake_graph_instance.captured_initial_state["mode"] == "report"
 
 
-def test_execute_report_uses_advanced_search_depth(db, monkeypatch):
+async def test_execute_report_uses_advanced_search_depth(db, monkeypatch):
     """
     Verify that execute_report calls build_graph with
     search_depth='advanced'.
     """
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
-    execute_report(question="What is quantum computing?", db=db)
+    await execute_report(question="What is quantum computing?", db=db)
 
     assert _fake_graph_instance is not None
     assert _fake_graph_instance.search_depth_used == "advanced"
@@ -200,10 +174,10 @@ def test_execute_report_uses_advanced_search_depth(db, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_execute_report_returns_expected_result_shape(db, monkeypatch):
+async def test_execute_report_returns_expected_result_shape(db, monkeypatch):
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
-    result = execute_report(question="What is quantum computing?", db=db)
+    result = await execute_report(question="What is quantum computing?", db=db)
 
     assert "run_id" in result
     assert "question" in result
@@ -213,14 +187,14 @@ def test_execute_report_returns_expected_result_shape(db, monkeypatch):
     assert "errors" in result
 
 
-def test_execute_report_answer_contains_report_sections(db, monkeypatch):
+async def test_execute_report_answer_contains_report_sections(db, monkeypatch):
     """
     Verify that the report answer contains the expected structured
     section headers.
     """
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
-    result = execute_report(question="What is quantum computing?", db=db)
+    result = await execute_report(question="What is quantum computing?", db=db)
 
     assert "## Introduction" in result["answer"]
     assert "## Key Findings" in result["answer"]
@@ -233,22 +207,25 @@ def test_execute_report_answer_contains_report_sections(db, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_execute_report_persists_run_to_database(db, monkeypatch):
+async def test_execute_report_persists_run_to_database(db, monkeypatch):
     """
     Verify that execute_report saves the completed report run to
     the database.
     """
     monkeypatch.setattr(report_use_case_module, "build_graph", fake_build_graph)
 
-    execute_report(question="What is quantum computing?", db=db)
+    await execute_report(question="What is quantum computing?", db=db)
+
+    from sqlalchemy import select
 
     from focused_research_agent.database.model import ConversationRun
 
-    count = db.query(ConversationRun).count()
+    result = await db.execute(select(ConversationRun))
+    count = len(result.scalars().all())
     assert count == 1
 
 
-def test_execute_report_returns_result_even_when_save_fails(db, monkeypatch):
+async def test_execute_report_returns_result_even_when_save_fails(db, monkeypatch):
     """
     Verify that execute_report returns the result even when database
     persistence fails.
@@ -262,7 +239,7 @@ def test_execute_report_returns_result_even_when_save_fails(db, monkeypatch):
 
     monkeypatch.setattr(report_use_case_module, "save_run", fake_save_run)
 
-    result = execute_report(question="What is quantum computing?", db=db)
+    result = await execute_report(question="What is quantum computing?", db=db)
 
     assert result["answer"] is not None
     assert result["status"] == "completed"

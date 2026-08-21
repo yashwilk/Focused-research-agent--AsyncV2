@@ -94,7 +94,7 @@ def test_call_research_returns_success_result_on_200(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(status_code=200, json_data=fake_data)
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -115,7 +115,7 @@ def test_call_research_returns_error_on_400(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(
                 status_code=400,
                 json_data={
@@ -140,7 +140,7 @@ def test_call_research_returns_error_on_422(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(status_code=422, json_data={})
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -157,7 +157,7 @@ def test_call_research_returns_error_on_unexpected_status(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(status_code=503, json_data={})
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -174,7 +174,7 @@ def test_call_research_raises_backend_unavailable_on_connect_error(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             raise httpx.ConnectError("connection refused")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -188,7 +188,7 @@ def test_call_research_returns_error_on_timeout(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             raise httpx.TimeoutException("timed out")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -205,7 +205,7 @@ def test_call_report_returns_success_result_on_200(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(
                 200, {"run_id": "abc", "answer": "## Introduction\nTest"}
             )
@@ -221,7 +221,7 @@ def test_call_report_returns_error_on_400(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(400, {"detail": "Bad question"})
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -235,7 +235,7 @@ def test_call_report_raises_backend_unavailable_on_connect_error(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             raise httpx.ConnectError("refused")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -248,7 +248,7 @@ def test_call_report_returns_error_on_timeout(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             raise httpx.TimeoutException("timeout")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -262,7 +262,7 @@ def test_call_chat_returns_success_result_on_200(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(
                 200,
                 {"run_id": "chat-abc", "conversation_id": "conv-1", "turn_number": 1},
@@ -281,7 +281,7 @@ def test_call_chat_returns_error_on_400(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             return FakeResponse(400, {"detail": "Bad question"})
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -297,7 +297,7 @@ def test_call_chat_raises_backend_unavailable_on_connect_error(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             raise httpx.ConnectError("refused")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -312,7 +312,7 @@ def test_call_chat_returns_error_on_timeout(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def post(self, url, json, timeout):
+        def post(self, url, json, headers, timeout):
             raise httpx.TimeoutException("timeout")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -328,7 +328,7 @@ def test_get_conversations_returns_list_on_200(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def get(self, url, timeout):
+        def get(self, url, headers, timeout):
             return FakeResponse(200, [{"conversation_id": "conv-1", "title": "Test"}])
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -344,7 +344,7 @@ def test_get_conversations_returns_empty_list_on_connect_error(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def get(self, url, timeout):
+        def get(self, url, headers, timeout):
             raise httpx.ConnectError("refused")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -359,7 +359,7 @@ def test_get_conversation_returns_list_on_200(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def get(self, url, timeout):
+        def get(self, url, headers, timeout):
             return FakeResponse(200, [{"turn_number": 1, "question": "What is AI?"}])
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -375,7 +375,7 @@ def test_get_conversation_returns_empty_list_on_connect_error(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def get(self, url, timeout):
+        def get(self, url, headers, timeout):
             raise httpx.ConnectError("refused")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())
@@ -390,7 +390,7 @@ def test_get_reports_returns_list_on_200(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def get(self, url, timeout):
+        def get(self, url, headers, timeout):
             return FakeResponse(
                 200, [{"conversation_id": "rep-1", "title": "Report on AI"}]
             )
@@ -408,7 +408,7 @@ def test_get_reports_returns_empty_list_on_connect_error(monkeypatch):
         ConnectError = httpx.ConnectError
         TimeoutException = httpx.TimeoutException
 
-        def get(self, url, timeout):
+        def get(self, url, headers, timeout):
             raise httpx.ConnectError("refused")
 
     monkeypatch.setattr(api_client_module, "httpx", FakeHttpx())

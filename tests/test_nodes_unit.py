@@ -49,7 +49,7 @@ def make_initial_state(question: str) -> ResearchState:
 
 
 class FakeScopeLLMProvider:
-    def generate_json(self, prompt: str) -> dict:
+    async def generate_json(self, prompt: str) -> dict:
         return {
             "scope": "Explain the test topic clearly",
             "assumptions": ["User is a beginner", "General context"],
@@ -58,7 +58,7 @@ class FakeScopeLLMProvider:
 
 
 class FakeQueriesLLMProvider:
-    def generate_json(self, prompt: str) -> dict:
+    async def generate_json(self, prompt: str) -> dict:
         return {
             "queries": [
                 "test topic overview",
@@ -69,7 +69,7 @@ class FakeQueriesLLMProvider:
 
 
 class FakeTooFewQueriesLLMProvider:
-    def generate_json(self, prompt: str) -> dict:
+    async def generate_json(self, prompt: str) -> dict:
         return {
             "queries": [
                 "only one query",
@@ -79,7 +79,7 @@ class FakeTooFewQueriesLLMProvider:
 
 
 class FakeSynthesisLLMProvider:
-    def generate_json(self, prompt: str) -> dict:
+    async def generate_json(self, prompt: str) -> dict:
         return {
             "answer": (
                 "The test topic can be understood through its overview, "
@@ -93,7 +93,7 @@ class FakeSynthesisLLMProvider:
 
 
 class FakeBadCitationLLMProvider:
-    def generate_json(self, prompt: str) -> dict:
+    async def generate_json(self, prompt: str) -> dict:
         return {
             "answer": "This answer includes an invalid citation.",
             "citations": [
@@ -103,7 +103,7 @@ class FakeBadCitationLLMProvider:
 
 
 class FakeSearchProvider:
-    def search(self, queries: list[str]) -> tuple[list[dict], list[str]]:
+    async def search(self, queries: list[str]) -> tuple[list[dict], list[str]]:
         # ← fixed: returns tuple (sources, images)
         return (
             [
@@ -130,37 +130,37 @@ def fake_get_search_provider():
     return FakeSearchProvider()
 
 
-def test_initialize_state_success_sets_run_id_and_started_status():
+async def test_initialize_state_success_sets_run_id_and_started_status():
     state = make_initial_state("test question")
 
-    result = initialize_state(state)
+    result = await initialize_state(state)
 
     assert result["run_id"]
     assert result["status"] == "started"
     assert result["errors"] == []
 
 
-def test_initialize_state_returns_error_when_question_missing():
+async def test_initialize_state_returns_error_when_question_missing():
     state = make_initial_state("   ")
 
-    result = initialize_state(state)
+    result = await initialize_state(state)
 
     assert result["status"] == "started"
     assert result["errors"] == ["init_run: No question provided"]
 
 
-def test_scope_question_returns_error_when_question_missing():
+async def test_scope_question_returns_error_when_question_missing():
     state = make_initial_state("")
 
-    result = scope_question(state, FakeScopeLLMProvider())
+    result = await scope_question(state, FakeScopeLLMProvider())
 
     assert result["errors"] == ["scope_question: No user query provided"]
 
 
-def test_scope_question_success_returns_scope_data():
+async def test_scope_question_success_returns_scope_data():
     state = make_initial_state("test question")
 
-    result = scope_question(state, FakeScopeLLMProvider())
+    result = await scope_question(state, FakeScopeLLMProvider())
 
     assert result["scope"] == "Explain the test topic clearly"
     assert result["assumptions"] == ["User is a beginner", "General context"]
@@ -168,22 +168,22 @@ def test_scope_question_success_returns_scope_data():
     assert result["status"] == "scoped"
 
 
-def test_generate_queries_returns_error_when_too_few_queries():
+async def test_generate_queries_returns_error_when_too_few_queries():
     state = make_initial_state("test question")
     state["scope"] = "Explain the test topic clearly"
 
-    result = generate_queries(state, FakeTooFewQueriesLLMProvider())
+    result = await generate_queries(state, FakeTooFewQueriesLLMProvider())
 
     assert result["errors"] == [
         "generate_queries: LLM returned fewer than 3 valid queries"
     ]
 
 
-def test_generate_queries_success_returns_queries():
+async def test_generate_queries_success_returns_queries():
     state = make_initial_state("test question")
     state["scope"] = "Explain the test topic clearly"
 
-    result = generate_queries(state, FakeQueriesLLMProvider())
+    result = await generate_queries(state, FakeQueriesLLMProvider())
 
     assert result["queries"] == [
         "test topic overview",
@@ -193,22 +193,22 @@ def test_generate_queries_success_returns_queries():
     assert result["status"] == "planned"
 
 
-def test_search_web_returns_error_when_queries_missing():
+async def test_search_web_returns_error_when_queries_missing():
     state = make_initial_state("test question")
     state["queries"] = None
 
     class FakeSearchProvider:
-        def search(self, queries) -> tuple:
+        async def search(self, queries) -> tuple:
             return ([], [])  # ← fixed: returns tuple
 
-    result = search_web(state, FakeSearchProvider())
+    result = await search_web(state, FakeSearchProvider())
 
     assert result["errors"] == ["search_web: queries must be a list"]
 
 
-def test_search_web_success_returns_sources(monkeypatch):
+async def test_search_web_success_returns_sources(monkeypatch):
     class FakeSearchProvider:
-        def search(self, queries) -> tuple:
+        async def search(self, queries) -> tuple:
             # ← fixed: returns tuple (sources, images)
             return (
                 [
@@ -226,12 +226,12 @@ def test_search_web_success_returns_sources(monkeypatch):
     state = make_initial_state("test question")
     state["queries"] = ["test query one", "test query two", "test query three"]
 
-    result = search_web(state, FakeSearchProvider())
+    result = await search_web(state, FakeSearchProvider())
     assert "sources" in result
     assert len(result["sources"]) == 1
 
 
-def test_synthesize_answer_returns_error_for_unknown_citation():
+async def test_synthesize_answer_returns_error_for_unknown_citation():
     state = make_initial_state("test question")
     state["sources"] = [
         {
@@ -250,14 +250,14 @@ def test_synthesize_answer_returns_error_for_unknown_citation():
         },
     ]
 
-    result = synthesize_answer(state, FakeBadCitationLLMProvider())
+    result = await synthesize_answer(state, FakeBadCitationLLMProvider())
 
     assert result["errors"] == [
         "synthesize_answer: LLM returned unknown citation URL: https://example.com/not-allowed"
     ]
 
 
-def test_synthesize_answer_success_returns_answer_and_citations():
+async def test_synthesize_answer_success_returns_answer_and_citations():
     state = make_initial_state("test question")
     state["sources"] = [
         {
@@ -276,7 +276,7 @@ def test_synthesize_answer_success_returns_answer_and_citations():
         },
     ]
 
-    result = synthesize_answer(state, FakeSynthesisLLMProvider())
+    result = await synthesize_answer(state, FakeSynthesisLLMProvider())
 
     assert result["answer"]
     assert result["citations"] == [
@@ -286,36 +286,36 @@ def test_synthesize_answer_success_returns_answer_and_citations():
     assert result["status"] == "synthesized"
 
 
-def test_finalize_run_marks_completed_when_answer_exists_and_no_errors():
+async def test_finalize_run_marks_completed_when_answer_exists_and_no_errors():
     state = make_initial_state("test question")
     state["answer"] = "A valid answer"
     state["errors"] = []
 
-    result = finalize_run(state)
+    result = await finalize_run(state)
 
     assert result["status"] == "completed"
 
 
-def test_finalize_run_marks_error_when_errors_exist():
+async def test_finalize_run_marks_error_when_errors_exist():
     state = make_initial_state("test question")
     state["answer"] = "A valid answer"
     state["errors"] = ["something failed"]
 
-    result = finalize_run(state)
+    result = await finalize_run(state)
 
     assert result["status"] == "error"
 
 
-def test_handle_error_sets_error_status():
+async def test_handle_error_sets_error_status():
     state = make_initial_state("test question")
     state["errors"] = ["scope_question: failed"]
 
-    result = handle_error(state)
+    result = await handle_error(state)
 
     assert result["status"] == "error"
 
 
-def test_synthesize_answer_uses_conversation_history_in_prompt(monkeypatch):
+async def test_synthesize_answer_uses_conversation_history_in_prompt(monkeypatch):
     """
     Verify that synthesize_answer passes conversation_history to the
     prompt builder when it is present in state. The FakeLLM captures
@@ -324,7 +324,7 @@ def test_synthesize_answer_uses_conversation_history_in_prompt(monkeypatch):
     captured_prompts = []
 
     class FakeCapturingLLMProvider:
-        def generate_json(self, prompt: str) -> dict:
+        async def generate_json(self, prompt: str) -> dict:
             captured_prompts.append(prompt)
             return {
                 "answer": "Quantum computing has several limitations.",
@@ -350,7 +350,7 @@ def test_synthesize_answer_uses_conversation_history_in_prompt(monkeypatch):
         }
     ]
 
-    result = synthesize_answer(state, FakeCapturingLLMProvider())
+    result = await synthesize_answer(state, FakeCapturingLLMProvider())
 
     assert result.get("answer") is not None
     assert len(captured_prompts) == 1
@@ -358,7 +358,7 @@ def test_synthesize_answer_uses_conversation_history_in_prompt(monkeypatch):
     assert "What is quantum computing?" in captured_prompts[0]
 
 
-def test_synthesize_answer_with_no_conversation_history_excludes_context(
+async def test_synthesize_answer_with_no_conversation_history_excludes_context(
     monkeypatch,
 ):
     """
@@ -369,7 +369,7 @@ def test_synthesize_answer_with_no_conversation_history_excludes_context(
     captured_prompts = []
 
     class FakeCapturingLLMProvider:
-        def generate_json(self, prompt: str) -> dict:
+        async def generate_json(self, prompt: str) -> dict:
             captured_prompts.append(prompt)
             return {
                 "answer": "Quantum computing uses quantum mechanics.",
@@ -388,14 +388,14 @@ def test_synthesize_answer_with_no_conversation_history_excludes_context(
     ]
     state["conversation_history"] = None
 
-    result = synthesize_answer(state, FakeCapturingLLMProvider())
+    result = await synthesize_answer(state, FakeCapturingLLMProvider())
 
     assert result.get("answer") is not None
     assert len(captured_prompts) == 1
     assert "CONVERSATION HISTORY" not in captured_prompts[0]
 
 
-def test_synthesize_answer_report_mode_includes_report_sections_in_prompt():
+async def test_synthesize_answer_report_mode_includes_report_sections_in_prompt():
     """
     Verify that synthesize_answer uses the report prompt when
     mode is 'report'. The captured prompt should contain the
@@ -404,7 +404,7 @@ def test_synthesize_answer_report_mode_includes_report_sections_in_prompt():
     captured_prompts = []
 
     class FakeCapturingLLMProvider:
-        def generate_json(self, prompt: str) -> dict:
+        async def generate_json(self, prompt: str) -> dict:
             captured_prompts.append(prompt)
             return {
                 "answer": "## Introduction\nTest intro.\n## Key Findings\nTest findings.",
@@ -423,7 +423,7 @@ def test_synthesize_answer_report_mode_includes_report_sections_in_prompt():
         },
     ]
 
-    result = synthesize_answer(state, FakeCapturingLLMProvider())
+    result = await synthesize_answer(state, FakeCapturingLLMProvider())
 
     assert result.get("answer") is not None
     assert len(captured_prompts) == 1
@@ -433,7 +433,7 @@ def test_synthesize_answer_report_mode_includes_report_sections_in_prompt():
     assert "## Conclusion" in captured_prompts[0]
 
 
-def test_synthesize_answer_research_mode_excludes_report_sections_from_prompt():
+async def test_synthesize_answer_research_mode_excludes_report_sections_from_prompt():
     """
     Verify that synthesize_answer does not include report section
     headers in the prompt when mode is 'research'. Confirms the
@@ -442,7 +442,7 @@ def test_synthesize_answer_research_mode_excludes_report_sections_from_prompt():
     captured_prompts = []
 
     class FakeCapturingLLMProvider:
-        def generate_json(self, prompt: str) -> dict:
+        async def generate_json(self, prompt: str) -> dict:
             captured_prompts.append(prompt)
             return {
                 "answer": "Quantum computing uses quantum mechanics.",
@@ -461,7 +461,7 @@ def test_synthesize_answer_research_mode_excludes_report_sections_from_prompt():
         },
     ]
 
-    result = synthesize_answer(state, FakeCapturingLLMProvider())
+    result = await synthesize_answer(state, FakeCapturingLLMProvider())
 
     assert result.get("answer") is not None
     assert len(captured_prompts) == 1

@@ -41,7 +41,7 @@ def make_initial_state(question: str) -> ResearchState:
 
 
 class FakeLLMProvider:
-    def generate_json(self, prompt: str) -> dict:
+    async def generate_json(self, prompt: str) -> dict:
         if not isinstance(prompt, str):
             raise ValueError("Prompt must be a string")
 
@@ -88,7 +88,7 @@ class FakeLLMProvider:
 
 
 class FakeSearchProvider:
-    def search(self, queries: list[str]) -> tuple[list[dict], list[str]]:
+    async def search(self, queries: list[str]) -> tuple[list[dict], list[str]]:
         return (
             [
                 {
@@ -125,7 +125,7 @@ def fake_get_search_provider(search_depth: str | None = None):
     return FakeSearchProvider()
 
 
-def test_graph_smoke_run(monkeypatch):
+async def test_graph_smoke_run(monkeypatch):
     import focused_research_agent.graph as graph_module
     import focused_research_agent.services.search_factory as search_factory_module  # ← change
     from focused_research_agent.services import llm_factory
@@ -141,7 +141,7 @@ def test_graph_smoke_run(monkeypatch):
 
     initial_state = make_initial_state("test question")
     graph = graph_module.build_graph()
-    final_state = graph.invoke(initial_state)
+    final_state = await graph.ainvoke(initial_state)
 
     assert final_state["run_id"]
     assert final_state["scope"]
